@@ -1,6 +1,8 @@
 # cumath
 Cuda-based matrix/vector computations
 
+CuVector and CuMatrix are allocated on device during their lifetime.
+
 Example :
 ```rust
 extern crate cumath;
