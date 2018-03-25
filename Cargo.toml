@@ -1,0 +1,14 @@
+[package]
+name = "cumath"
+description = "Cuda-based matrix/vector computations"
+version = "0.1.1"
+authors = ["ltei"]
+license = "MIT OR Apache-2.0"
+
+build = "build.rs"
+
+[dependencies]
+libc = "0.2.39"
+
+[build-dependencies]
+cc = "1.0"
