@@ -89,6 +89,20 @@ impl Cublas {
         }.assert_success();
     }
 
+    /** output = out_scl * output + in_scl * left_op * right_op */
+    pub fn mult_col_row_(&self, left_op: &CuVector, right_op: &CuVector, output: &mut CuMatrix, in_scl: f32, out_scl: f32) {
+        assert_eq_usize(left_op.len, "left_op.len()", output.rows, "output.rows()");
+        assert_eq_usize(right_op.len, "right_op.len()", output.cols, "output.cols()");
+        unsafe {
+            cublasSgemm_v2(self.handle,
+                           CublasOperation::None, CublasOperation::None,
+                           (left_op.len as i32), (right_op.len as i32), 1, &in_scl,
+                           left_op.data, (left_op.len as i32),
+                           right_op.data, 1,
+                           &out_scl, output.data, (output.rows as i32))
+        }.assert_success();
+    }
+
     pub fn abs_sum_m(&self, matrix: &CuMatrix) -> f32 {
         let mut output = 0.0;
         unsafe { cublasSasum_v2(self.handle, matrix.len as i32, matrix.data, 1, &mut output) }.assert_success();
@@ -158,7 +172,7 @@ mod tests {
         let cublas = super::Cublas::new();
         let matrix1 = super::CuMatrix::from_data(2, 3, input_data.as_slice());
         let matrix2 = super::CuMatrix::from_data(3, 2, input_data.as_slice());
-        let mut output = super::CuMatrix::new(2, 2);
+        let mut output = super::CuMatrix::new(2, 2, 0.0);
 
         cublas.mult_m_m(&matrix1, &matrix2, &mut output);
 
@@ -178,7 +192,7 @@ mod tests {
         let cublas = super::Cublas::new();
         let col_vector = super::CuVector::from_data(col_vector_data.as_slice());
         let matrix = super::CuMatrix::from_data(2, 3, matrix_data.as_slice());
-        let mut output = super::CuVector::new(2);
+        let mut output = super::CuVector::new(2, 0.0);
 
         cublas.mult_m_col(&matrix, &col_vector, &mut output);
 
@@ -196,7 +210,7 @@ mod tests {
         let cublas = super::Cublas::new();
         let vector = super::CuVector::from_data(vector_data.as_slice());
         let matrix = super::CuMatrix::from_data(3, 2, matrix_data.as_slice());
-        let mut output = super::CuVector::new(2);
+        let mut output = super::CuVector::new(2, 0.0);
 
         cublas.mult_row_m(&vector, &matrix, &mut output);
 
@@ -214,7 +228,7 @@ mod tests {
         let cublas = super::Cublas::new();
         let col_vector = super::CuVector::from_data(col_vector_data.as_slice());
         let row_vector = super::CuVector::from_data(row_vector_data.as_slice());
-        let mut output = super::CuMatrix::new(3, 2);
+        let mut output = super::CuMatrix::new(3, 2, 0.0);
 
         cublas.mult_col_row(&col_vector, &row_vector, &mut output);
 
@@ -233,7 +247,7 @@ mod tests {
     fn curand_generate_uniform() {
         let mut generator = super::CurandGenerator::new();
 
-        let mut vector = super::CuVector::new(10);
+        let mut vector = super::CuVector::new(10, 0.0);
         generator.generate_uniform_v(&mut vector);
 
         let mut buffer = vec![0.0; 10];

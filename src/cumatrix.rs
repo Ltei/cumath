@@ -22,15 +22,21 @@ impl Drop for CuMatrix {
     }
 }
 impl CuMatrix {
-    pub fn new(rows: usize, cols: usize) -> CuMatrix {
+    pub fn new(rows: usize, cols: usize, init_value: f32) -> CuMatrix {
         let len = rows*cols;
         let mut data = std::ptr::null_mut();
         unsafe { cudaMalloc(&mut data, len*std::mem::size_of::<f32>()) }.assert_success();
+        unsafe { CudaKernel_vectorSet((data as *mut f32), (len as i32), init_value) }
         CuMatrix { rows, cols, len, data: (data as *mut f32) }
     }
     pub fn from_data(rows: usize, cols: usize, data: &[f32]) -> CuMatrix {
         assert_eq_usize(rows*cols, "rows*cols", data.len(), "data.len()");
-        let mut output = CuMatrix::new(rows, cols);
+        let mut output = {
+            let len = rows*cols;
+            let mut data = std::ptr::null_mut();
+            unsafe { cudaMalloc(&mut data, len*std::mem::size_of::<f32>()) }.assert_success();
+            CuMatrix { rows, cols, len, data: (data as *mut f32) }
+        };
         output.copy_from_host(data);
         output
     }
@@ -112,7 +118,7 @@ impl CuMatrix {
         println!("{}", msg);
         for row in 0..self.rows {
             for col in 0..self.cols {
-                print!("{}, ", buffer[row+col*self.rows])
+                print!("{:.5}, ", buffer[row+col*self.rows])
             }
             println!()
         }
@@ -171,7 +177,7 @@ mod tests {
     fn init() {
         let value0 = -0.23254;
         let value1 = 1.1852;
-        let mut matrix = super::CuMatrix::new(2, 4);
+        let mut matrix = super::CuMatrix::new(2, 4, 0.0);
 
         matrix.init(value0);
         matrix.slice_mut(1, 2).init(value1);
@@ -192,8 +198,8 @@ mod tests {
     fn add_self() {
         let value0 = -0.23254;
         let value1 = 1.185254;
-        let mut matrix0 = super::CuMatrix::new(2, 4);
-        let mut matrix1 = super::CuMatrix::new(2, 2);
+        let mut matrix0 = super::CuMatrix::new(2, 4, 0.0);
+        let mut matrix1 = super::CuMatrix::new(2, 2, 0.0);
 
         matrix0.init(value0);
         matrix1.init(value1);

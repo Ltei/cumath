@@ -20,13 +20,19 @@ impl Drop for CuVector {
     }
 }
 impl CuVector {
-    pub fn new(len: usize) -> CuVector {
+    pub fn new(len: usize, init_value: f32) -> CuVector {
         let mut data = std::ptr::null_mut();
         unsafe { cudaMalloc(&mut data, len*std::mem::size_of::<f32>()) }.assert_success();
+        unsafe { CudaKernel_vectorSet((data as *mut f32), (len as i32), init_value) }
         CuVector { len, data: (data as *mut f32) }
     }
     pub fn from_data(data: &[f32]) -> CuVector {
-        let mut output = Self::new(data.len());
+        let mut output = {
+            let len = data.len();
+            let mut data = std::ptr::null_mut();
+            unsafe { cudaMalloc(&mut data, len*std::mem::size_of::<f32>()) }.assert_success();
+            CuVector { len, data: (data as *mut f32) }
+        };
         output.copy_from_host(data);
         output
     }
@@ -123,7 +129,7 @@ impl CuVector {
         self.copy_to_host(&mut buffer);
         print!("{}   ", msg);
         for i in 0..self.len {
-            print!("{}, ", buffer[i])
+            print!("{:.5}, ", buffer[i])
         }
         println!()
     }
@@ -181,7 +187,7 @@ mod tests {
     fn init() {
         let value0 = -0.23254;
         let value1 = 1.1852;
-        let mut vector = super::CuVector::new(5);
+        let mut vector = super::CuVector::new(5, 0.0);
 
         vector.init(value0);
         vector.slice_mut(1, 3).init(value1);
@@ -199,8 +205,8 @@ mod tests {
     fn add_self() {
         let value0 = -0.23254;
         let value1 = 1.185254;
-        let mut vector0 = super::CuVector::new(5);
-        let mut vector1 = super::CuVector::new(2);
+        let mut vector0 = super::CuVector::new(5, 0.0);
+        let mut vector1 = super::CuVector::new(2, 0.0);
 
         vector0.init(value0);
         vector1.init(value1);

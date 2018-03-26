@@ -1,11 +1,11 @@
 [package]
 name = "cumath"
 description = "Cuda-based matrix/vector computations"
-version = "0.1.11"
+version = "0.0.2"
 repository = "https://github.com/Ltei/cumath"
 authors = ["ltei"]
 license = "MIT OR Apache-2.0"
-
+readme = "README.md"
 build = "build.rs"
 
 [dependencies]
