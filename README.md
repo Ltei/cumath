@@ -18,8 +18,8 @@ fn assert_equals_float(a: f32, b: f32) {
 fn main() {
     let value0 = -0.23254;
     let value1 = 1.185254;
-    let mut vector0 = CuVector::new(5);
-    let mut vector1 = CuVector::new(2);
+    let mut vector0 = CuVector::new(5, 0.0); //(len, initial_value)
+    let mut vector1 = CuVector::new(2, 0.0);
 
     vector0.init(value0);
     vector1.init(value1);
