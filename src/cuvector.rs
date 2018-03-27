@@ -33,7 +33,7 @@ impl CuVector {
             unsafe { cudaMalloc(&mut data, len*std::mem::size_of::<f32>()) }.assert_success();
             CuVector { len, data: (data as *mut f32) }
         };
-        output.copy_from_host(data);
+        output.clone_from_host(data);
         output
     }
 
@@ -61,21 +61,20 @@ impl CuVector {
     pub fn init(&mut self, value: f32) {
         unsafe { CudaKernel_vectorSet((self.data as *mut f32), (self.len as i32), value) }
     }
-    pub fn copy_from_host(&mut self, data: &[f32]) {
+    pub fn clone_from_host(&mut self, data: &[f32]) {
         assert_eq_usize(self.len, "self.len()", data.len(), "data.len()");
         unsafe {
             cudaMemcpy((self.data as *mut c_void), (data.as_ptr() as *const c_void), self.len*std::mem::size_of::<f32>(), CudaMemcpyKind::HostToDevice)
         }.assert_success();
     }
-    pub fn copy_to_host(&self, data: &mut [f32]) {
+    pub fn clone_to_host(&self, data: &mut [f32]) {
         assert_eq_usize(self.len, "self.len()", data.len(), "data.len()");
         unsafe {
             cudaMemcpy((data.as_mut_ptr() as *mut c_void), (self.data as *mut c_void),
                        self.len*std::mem::size_of::<f32>(), CudaMemcpyKind::DeviceToHost)
         }.assert_success();
     }
-
-    pub fn copy_from_device(&mut self, source: &CuVector) {
+    pub fn clone_from_device(&mut self, source: &CuVector) {
         assert_eq_usize(self.len, "self.len()", source.len, "source.len()");
         unsafe {
             cudaMemcpy((self.data as *mut c_void), (source.data as *mut c_void),
@@ -83,11 +82,12 @@ impl CuVector {
         }.assert_success();
     }
 
+
     pub fn add_scl_self(&mut self, value: f32) {
-        unsafe { CudaKernel_vectorAddSclSelf((self.data as *mut f32), (self.len as i32), value) }
+        unsafe { CudaKernel_vectorAddScl(self.data, self.data, (self.len as i32), value) }
     }
     pub fn scale_self(&mut self, value: f32) {
-        unsafe { CudaKernel_vectorScaleSelf(self.data, (self.len as i32), value) }
+        unsafe { CudaKernel_vectorScl(self.data, self.data, (self.len as i32), value) }
     }
     pub fn add_self(&mut self, right_op: &Self) {
         assert_eq_usize(self.len, "self.len()", right_op.len, "right_op.len()");
@@ -98,6 +98,12 @@ impl CuVector {
         unsafe { CudaKernel_vectorPMult(self.data, right_op.data, self.data, (self.len as i32)) }
     }
 
+    pub fn add_scl(vector: &Self, value: f32, output: &mut Self) {
+        unsafe { CudaKernel_vectorAddScl(vector.data, output.data, vector.len as i32, value) }
+    }
+    pub fn scale(vector: &Self, value: f32, output: &mut Self) {
+        unsafe { CudaKernel_vectorScl(vector.data, output.data, vector.len as i32, value) }
+    }
     pub fn sub(left_op: &Self, right_op: &Self, output: &mut Self) {
         assert_eq_usize(left_op.len, "left_op.len()", right_op.len, "right_op.len()");
         assert_eq_usize(left_op.len, "left_op.len()", output.len, "output.len()");
@@ -123,10 +129,22 @@ impl CuVector {
         unsafe { CudaKernel_vectorSigmoidDeriv((vector.data as *const f32), (output.data as *mut f32), (vector.len as i32)) }
     }
 
+    /** y[i] *= (a*x[i])+b */
+    pub fn axpb_y(a: f32, x: &Self, b: f32, y: &mut Self) {
+        assert_eq_usize(x.len, "x.len()", y.len, "y.len()");
+        unsafe { CudaKernel_aXpb_Y(a, x.data, b, y.data, x.len as i32) }
+    }
+    /** y[i] += x[i] * v[i] */
+    pub fn xvpy(x: &Self, v: &Self, y: &mut Self) {
+        assert_eq_usize(x.len, "x.len()", v.len, "v.len()");
+        assert_eq_usize(x.len, "x.len()", y.len, "y.len()");
+        unsafe { CudaKernel_XVpY(x.data, v.data, y.data, x.len as i32) }
+    }
+
     #[allow(dead_code)]
     pub fn dev_print(&self, msg: &str) {
         let mut buffer = vec![0.0; self.len];
-        self.copy_to_host(&mut buffer);
+        self.clone_to_host(&mut buffer);
         print!("{}   ", msg);
         for i in 0..self.len {
             print!("{:.5}, ", buffer[i])
@@ -193,7 +211,7 @@ mod tests {
         vector.slice_mut(1, 3).init(value1);
 
         let mut output = vec![0.0; 5];
-        vector.copy_to_host(&mut output);
+        vector.clone_to_host(&mut output);
 
         assert_equals_float(output[0], value0);
         assert_equals_float(output[1], value1);
@@ -213,7 +231,7 @@ mod tests {
         vector0.slice_mut(2, 2).add_self(&vector1);
 
         let mut output = vec![0.0; 5];
-        vector0.copy_to_host(&mut output);
+        vector0.clone_to_host(&mut output);
 
         assert_equals_float(output[0], value0);
         assert_equals_float(output[1], value0);

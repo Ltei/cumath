@@ -103,15 +103,26 @@ impl Cublas {
         }.assert_success();
     }
 
-    pub fn abs_sum_m(&self, matrix: &CuMatrix) -> f32 {
+    pub fn asum_m(&self, matrix: &CuMatrix) -> f32 {
         let mut output = 0.0;
         unsafe { cublasSasum_v2(self.handle, matrix.len as i32, matrix.data, 1, &mut output) }.assert_success();
         output
     }
-    pub fn abs_sum_v(&self, vector: &CuVector) -> f32 {
+    pub fn asum_v(&self, vector: &CuVector) -> f32 {
         let mut output = 0.0;
         unsafe { cublasSasum_v2(self.handle, vector.len as i32, vector.data, 1, &mut output) }.assert_success();
         output
+    }
+
+    pub fn axpy_m(&self, alpha: f32, x: &CuMatrix, y: &mut CuMatrix) {
+        unsafe {
+            cublasSaxpy_v2(self.handle, x.len() as i32, &alpha, x.data, 1, y.data, 1)
+        }.assert_success()
+    }
+    pub fn axpy_v(&self, alpha: f32, x: &CuVector, y: &mut CuVector) {
+        unsafe {
+            cublasSaxpy_v2(self.handle, x.len() as i32, &alpha, x.data, 1, y.data, 1)
+        }.assert_success()
     }
 }
 
@@ -133,6 +144,7 @@ impl CurandGenerator {
     pub fn generate_uniform_v(&mut self, output: &mut CuVector) {
         unsafe { curandGenerateUniform(self.handle, output.data, output.len) }.assert_success();
     }
+
     pub fn generate_uniform_m(&mut self, output: &mut CuMatrix) {
         unsafe { curandGenerateUniform(self.handle, output.data, output.len) }.assert_success();
     }
@@ -163,7 +175,7 @@ mod tests {
         let cublas = super::Cublas::new();
         let matrix = super::CuMatrix::from_data(3, 3, input_data.as_slice());
 
-        assert_eq!(24.0, cublas.abs_sum_m(&matrix));
+        assert_eq!(24.0, cublas.asum_m(&matrix));
     }
     #[test]
     fn cublas_mult_m_m() {
@@ -197,7 +209,7 @@ mod tests {
         cublas.mult_m_col(&matrix, &col_vector, &mut output);
 
         let mut output_buffer = vec![0.0; 2];
-        output.copy_to_host(output_buffer.as_mut_slice());
+        output.clone_to_host(output_buffer.as_mut_slice());
 
         assert_equals_float(output_buffer[0], -1.5);
         assert_equals_float(output_buffer[1], 13.5);
@@ -215,7 +227,7 @@ mod tests {
         cublas.mult_row_m(&vector, &matrix, &mut output);
 
         let mut output_buffer = vec![0.0; 2];
-        output.copy_to_host(output_buffer.as_mut_slice());
+        output.clone_to_host(output_buffer.as_mut_slice());
 
         assert_equals_float(output_buffer[0], -7.5);
         assert_equals_float(output_buffer[1], -20.75);
@@ -251,7 +263,7 @@ mod tests {
         generator.generate_uniform_v(&mut vector);
 
         let mut buffer = vec![0.0; 10];
-        vector.copy_to_host(&mut buffer);
+        vector.clone_to_host(&mut buffer);
 
         buffer.iter().for_each(|x| {
             assert!(x >= &0.0 && x <= &1.0);

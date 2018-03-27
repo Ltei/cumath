@@ -41,6 +41,19 @@ impl CuMatrix {
         output
     }
 
+    /*pub fn clone_randomized(&self, magnitude: f32) -> Self {
+        let mut data = std::ptr::null_mut();
+        unsafe { cudaMalloc(&mut data, self.len*std::mem::size_of::<f32>()) }.assert_success();
+        let mut output = CuMatrix {
+            rows: self.rows,
+            cols: self.cols,
+            len: self.len,
+            data: (data as *mut f32),
+        };
+        output.copy_from_device(self);
+        output
+    }*/
+
     #[inline]
     pub fn len(&self) -> usize {
         return self.len;
@@ -102,10 +115,10 @@ impl CuMatrix {
     }
 
     pub fn add_scl_self(&mut self, value: f32) {
-        unsafe { CudaKernel_vectorAddSclSelf((self.data as *mut f32), (self.len as i32), value) }
+        unsafe { CudaKernel_vectorAddScl(self.data, self.data, (self.len as i32), value) }
     }
     pub fn scale_self(&mut self, value: f32) {
-        unsafe { CudaKernel_vectorScaleSelf((self.data as *mut f32), (self.len as i32), value) }
+        unsafe { CudaKernel_vectorScl(self.data, self.data, (self.len as i32), value) }
     }
     pub fn add_self(&mut self, to_add: &Self) {
         unsafe { CudaKernel_vectorAdd(self.data, to_add.data, self.data, self.len as i32) }
@@ -217,5 +230,14 @@ mod tests {
         assert_equals_float(output[6], value0);
         assert_equals_float(output[7], value0);
     }
+
+    /*#[test]
+    fn clone_randomized() {
+        let matrix = super::CuMatrix::from_data(3, 3, &[2.0, -1.0, 5.0, 1.0, 4.0, 2.0, -1.0, 5.0, 1.0]);
+        let output = matrix.clone_randomized(1.0);
+
+        matrix.dev_print("Input");
+        output.dev_print("Output");
+    }*/
 
 }
