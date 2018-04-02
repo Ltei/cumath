@@ -4,10 +4,37 @@ use std::ops::{Deref, DerefMut};
 use libc::c_void;
 
 use ffi::cuda_ffi::*;
-use ffi::kernel_ffi::*;
+use ffi::vectorkernel_ffi::*;
 
 use assert::*;
 
+
+
+/*// Vector traits
+
+pub trait CuVectorOp: Sized {
+    #[inline]
+    fn len() -> usize;
+    #[inline]
+    fn ptr() -> *const f32;
+}
+pub trait CuVectorOpMut: CuVectorOp {
+    #[inline]
+    fn ptr_mut() -> *mut f32;
+}
+
+
+// CuVector
+
+pub struct CuVector {
+    len: usize,
+    ptr: *mut f32,
+}
+impl Drop for CuVector {
+    fn drop(&mut self) {
+        unsafe { cudaFree(self.ptr as *mut c_void) }.assert_success();
+    }
+}*/
 
 
 pub struct CuVector {
@@ -23,7 +50,7 @@ impl CuVector {
     pub fn new(len: usize, init_value: f32) -> CuVector {
         let mut data = std::ptr::null_mut();
         unsafe { cudaMalloc(&mut data, len*std::mem::size_of::<f32>()) }.assert_success();
-        unsafe { CudaKernel_vectorSet((data as *mut f32), (len as i32), init_value) }
+        unsafe { VectorKernel_init((data as *mut f32), (len as i32), init_value) }
         CuVector { len, data: (data as *mut f32) }
     }
     pub fn from_data(data: &[f32]) -> CuVector {
@@ -59,7 +86,7 @@ impl CuVector {
     }
 
     pub fn init(&mut self, value: f32) {
-        unsafe { CudaKernel_vectorSet((self.data as *mut f32), (self.len as i32), value) }
+        unsafe { VectorKernel_init((self.data as *mut f32), (self.len as i32), value) }
     }
     pub fn clone_from_host(&mut self, data: &[f32]) {
         assert_eq_usize(self.len, "self.len()", data.len(), "data.len()");
@@ -84,61 +111,69 @@ impl CuVector {
 
 
     pub fn add_scl_self(&mut self, value: f32) {
-        unsafe { CudaKernel_vectorAddScl(self.data, self.data, (self.len as i32), value) }
+        unsafe { VectorKernel_addValue(self.data, self.data, (self.len as i32), value) }
     }
     pub fn scale_self(&mut self, value: f32) {
-        unsafe { CudaKernel_vectorScl(self.data, self.data, (self.len as i32), value) }
+        unsafe { VectorKernel_scl(self.data, self.data, (self.len as i32), value) }
     }
     pub fn add_self(&mut self, right_op: &Self) {
         assert_eq_usize(self.len, "self.len()", right_op.len, "right_op.len()");
-        unsafe { CudaKernel_vectorAdd(self.data, right_op.data, self.data, self.len as i32) }
+        unsafe { VectorKernel_add(self.data, right_op.data, self.data, self.len as i32) }
     }
     pub fn pmult_self(&mut self, right_op: &Self) {
         assert_eq_usize(self.len, "self.len()", right_op.len, "right_op.len()");
-        unsafe { CudaKernel_vectorPMult(self.data, right_op.data, self.data, (self.len as i32)) }
+        unsafe { VectorKernel_pmult(self.data, right_op.data, self.data, (self.len as i32)) }
+    }
+    pub fn sigmoid_self(&mut self) {
+        unsafe { VectorKernel_sigmoid(self.data, self.data, self.len as i32) }
     }
 
     pub fn add_scl(vector: &Self, value: f32, output: &mut Self) {
-        unsafe { CudaKernel_vectorAddScl(vector.data, output.data, vector.len as i32, value) }
+        unsafe { VectorKernel_addValue(vector.data, output.data, vector.len as i32, value) }
     }
     pub fn scale(vector: &Self, value: f32, output: &mut Self) {
-        unsafe { CudaKernel_vectorScl(vector.data, output.data, vector.len as i32, value) }
+        unsafe { VectorKernel_scl(vector.data, output.data, vector.len as i32, value) }
+    }
+    pub fn add(left_op: &Self, right_op: &Self, output: &mut Self) {
+        assert_eq_usize(left_op.len, "left_op.len()", right_op.len, "right_op.len()");
+        assert_eq_usize(left_op.len, "left_op.len()", output.len, "output.len()");
+        unsafe { VectorKernel_add(left_op.data, right_op.data, output.data, (left_op.len as i32)) }
     }
     pub fn sub(left_op: &Self, right_op: &Self, output: &mut Self) {
         assert_eq_usize(left_op.len, "left_op.len()", right_op.len, "right_op.len()");
         assert_eq_usize(left_op.len, "left_op.len()", output.len, "output.len()");
-        unsafe { CudaKernel_vectorSub((left_op.data as *const f32),
-                                      (right_op.data as *const f32),
-                                      (output.data as *mut f32),
-                                      (left_op.len as i32)) }
+        unsafe { VectorKernel_sub((left_op.data as *const f32),
+                                  (right_op.data as *const f32),
+                                  (output.data as *mut f32),
+                                  (left_op.len as i32)) }
     }
     pub fn pmult(left_op: &Self, right_op: &Self, output: &mut Self) {
         assert_eq_usize(left_op.len, "left_op.len()", right_op.len, "right_op.len()");
         assert_eq_usize(left_op.len, "left_op.len()", output.len, "output.len()");
-        unsafe { CudaKernel_vectorPMult((left_op.data as *const f32),
-                                        (right_op.data as *const f32),
-                                        (output.data as *mut f32),
-                                        (left_op.len as i32)) }
+        unsafe { VectorKernel_pmult((left_op.data as *const f32),
+                                    (right_op.data as *const f32),
+                                    (output.data as *mut f32),
+                                    (left_op.len as i32)) }
     }
     pub fn sigmoid(vector: &Self, output: &mut Self) {
         assert_eq_usize(vector.len, "vector.len()", output.len, "output.len()");
-        unsafe { CudaKernel_vectorSigmoid((vector.data as *const f32), (output.data as *mut f32), (vector.len as i32)) }
+        unsafe { VectorKernel_sigmoid((vector.data as *const f32), (output.data as *mut f32), (vector.len as i32)) }
     }
     pub fn sigmoid_deriv(vector: &Self, output: &mut Self) {
         assert_eq_usize(vector.len, "vector.len()", output.len, "output.len()");
-        unsafe { CudaKernel_vectorSigmoidDeriv((vector.data as *const f32), (output.data as *mut f32), (vector.len as i32)) }
+        unsafe { VectorKernel_sigmoidDeriv((vector.data as *const f32), (output.data as *mut f32), (vector.len as i32)) }
     }
 
     /** y[i] *= (a*x[i])+b */
     pub fn axpb_y(a: f32, x: &Self, b: f32, y: &mut Self) {
         assert_eq_usize(x.len, "x.len()", y.len, "y.len()");
-        unsafe { CudaKernel_aXpb_Y(a, x.data, b, y.data, x.len as i32) }
+        unsafe { VectorKernel_aXpb_Y(a, x.data, b, y.data, x.len as i32) }
     }
     /** y[i] += x[i] * v[i] */
     pub fn xvpy(x: &Self, v: &Self, y: &mut Self) {
         assert_eq_usize(x.len, "x.len()", v.len, "v.len()");
         assert_eq_usize(x.len, "x.len()", y.len, "y.len()");
-        unsafe { CudaKernel_XVpY(x.data, v.data, y.data, x.len as i32) }
+        unsafe { VectorKernel_XVpY(x.data, v.data, y.data, x.len as i32) }
     }
 
     #[allow(dead_code)]

@@ -115,5 +115,13 @@ extern {
                       count: usize,
                       kind: CudaMemcpyKind) -> CudaError;
 
+    pub fn cudaMemcpy2D(dst: *mut c_void,
+                        dpitch: usize,
+                        src: *const c_void,
+                        spitch: usize,
+                        width: usize,
+                        height: usize,
+                        kind: CudaMemcpyKind) -> CudaError;
+
     pub fn cudaDeviceSynchronize() -> CudaError;
 }
