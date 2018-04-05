@@ -13,119 +13,18 @@ use assert::*;
 
 mod tags;
 use tags::*;
+
 mod vector;
 pub use vector::*;
 mod matrix;
 pub use matrix::*;
-
+mod cublas;
+pub use cublas::*;
 
 pub struct Cuda { }
 impl Cuda {
     pub fn synchronize() {
         cuda_synchronize();
-    }
-}
-
-
-pub struct Cublas {
-    handle: *mut StructCublasContext,
-}
-impl Drop for Cublas {
-    fn drop(&mut self) {
-        unsafe { cublasDestroy_v2(self.handle) }.assert_success();
-    }
-}
-impl Cublas {
-    pub fn new() -> Cublas {
-        let mut handle = std::ptr::null_mut();
-        unsafe { cublasCreate_v2(&mut handle) }.assert_success();
-        Cublas { handle }
-    }
-
-    pub fn mult_m_m(&self, left_op: &CuMatrixOp, right_op: &CuMatrixOp, output: &mut CuMatrixOpMut) {
-        assert_eq_usize(left_op.cols(), "left_op.cols()", right_op.rows(), "right_op.rows()");
-        assert_eq_usize(left_op.rows(), "left_op.rows()", output.rows(), "output.rows()");
-        assert_eq_usize(right_op.cols(), "right_op.cols()", output.cols(), "output.cols()");
-        unsafe {
-            cublasSgemm_v2(self.handle,
-                           CublasOperation::None, CublasOperation::None,
-                           left_op.rows() as i32, right_op.cols() as i32, left_op.cols() as i32, &1.0,
-                           left_op.ptr(), left_op.rows() as i32,
-                           right_op.ptr(), right_op.rows() as i32,
-                           &0.0, output.ptr_mut(), output.rows() as i32)
-        }.assert_success();
-    }
-    pub fn mult_row_m(&self, left_op: &CuVectorOp, right_op: &CuMatrixOp, output: &mut CuVectorOpMut) {
-        assert_eq_usize(left_op.len(), "left_op.len()", right_op.rows(), "right_op.rows()");
-        assert_eq_usize(right_op.cols(), "right_op.cols()", output.len(), "output.len()");
-        unsafe {
-            cublasSgemv_v2(self.handle,
-                           CublasOperation::Transpose,
-                           right_op.rows() as i32, right_op.cols() as i32, &1.0,
-                           right_op.ptr(), right_op.rows() as i32,
-                           left_op.ptr(), 1,
-                           &0.0, output.ptr_mut(), 1)
-        }.assert_success();
-    }
-    pub fn mult_m_col(&self, left_op: &CuMatrixOp, right_op: &CuVectorOp, output: &mut CuVectorOpMut) {
-        assert_eq_usize(left_op.cols(), "left_op.cols()", right_op.len(), "right_op.len()");
-        assert_eq_usize(left_op.rows(), "left_op.rows()", output.len(), "output.len()");
-        unsafe {
-            cublasSgemv_v2(self.handle,
-                           CublasOperation::None,
-                           left_op.rows() as i32, left_op.cols() as i32, &1.0,
-                           left_op.ptr(), left_op.rows() as i32,
-                           right_op.ptr(), 1,
-                           &0.0, output.ptr_mut(), 1)
-        }.assert_success();
-    }
-    pub fn mult_col_row(&self, left_op: &CuVectorOp, right_op: &CuVectorOp, output: &mut CuMatrixOpMut) {
-        assert_eq_usize(left_op.len(), "left_op.len()", output.rows(), "output.rows()");
-        assert_eq_usize(right_op.len(), "right_op.len()", output.cols(), "output.cols()");
-        unsafe {
-            cublasSgemm_v2(self.handle,
-                           CublasOperation::None, CublasOperation::None,
-                           left_op.len() as i32, right_op.len() as i32, 1, &1.0,
-                           left_op.ptr(), left_op.len() as i32,
-                           right_op.ptr(), 1,
-                           &0.0, output.ptr_mut(), output.rows() as i32)
-        }.assert_success();
-    }
-
-    /** output = out_scl * output + in_scl * left_op * right_op */
-    pub fn mult_col_row_(&self, left_op: &CuVectorOp, right_op: &CuVectorOp, output: &mut CuMatrixOpMut, in_scl: f32, out_scl: f32) {
-        assert_eq_usize(left_op.len(), "left_op.len()", output.rows(), "output.rows()");
-        assert_eq_usize(right_op.len(), "right_op.len()", output.cols(), "output.cols()");
-        unsafe {
-            cublasSgemm_v2(self.handle,
-                           CublasOperation::None, CublasOperation::None,
-                           left_op.len() as i32, right_op.len() as i32, 1, &in_scl,
-                           left_op.ptr(), left_op.len() as i32,
-                           right_op.ptr(), 1,
-                           &out_scl, output.ptr_mut(), output.rows() as i32)
-        }.assert_success();
-    }
-
-    /*pub fn asum_m(&self, matrix: &CuMatrix) -> f32 {
-        let mut output = 0.0;
-        unsafe { cublasSasum_v2(self.handle, matrix.len as i32, matrix.data, 1, &mut output) }.assert_success();
-        output
-    }*/
-    pub fn asum_v(&self, vector: &CuVectorOp) -> f32 {
-        let mut output = 0.0;
-        unsafe { cublasSasum_v2(self.handle, vector.len() as i32, vector.ptr(), 1, &mut output) }.assert_success();
-        output
-    }
-
-    pub fn axpy_m(&self, alpha: f32, x: &CuMatrixOp, y: &mut CuMatrixOpMut) {
-        unsafe {
-            cublasSaxpy_v2(self.handle, x.len() as i32, &alpha, x.ptr(), 1, y.ptr_mut(), 1)
-        }.assert_success()
-    }
-    pub fn axpy_v(&self, alpha: f32, x: &CuVectorOp, y: &mut CuVectorOpMut) {
-        unsafe {
-            cublasSaxpy_v2(self.handle, x.len() as i32, &alpha, x.ptr(), 1, y.ptr_mut(), 1)
-        }.assert_success()
     }
 }
 
@@ -172,7 +71,7 @@ impl CurandGenerator {
 mod tests {
     use super::*;
 
-    fn assert_equals_float(a: f32, b: f32) {
+    /*fn assert_equals_float(a: f32, b: f32) {
         let d = a-b;
         if d < -0.000001 || d > 0.000001 {
             panic!("{} != {}", a, b);
@@ -264,7 +163,7 @@ mod tests {
         assert_equals_float(output_buffer[3], 4.4);
         assert_equals_float(output_buffer[4], -6.4);
         assert_equals_float(output_buffer[5], 2.2);
-    }
+    }*/
 
     #[test]
     fn curand_generate_uniform_v() {
