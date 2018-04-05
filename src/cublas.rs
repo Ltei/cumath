@@ -110,6 +110,8 @@ impl Cublas {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     fn assert_equals_float(a: f32, b: f32) {
         let d = a-b;
         if d < -0.000001 || d > 0.000001 {
