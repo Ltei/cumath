@@ -11,14 +11,14 @@ pub use self::vector_slice::*;
 
 
 
-pub trait CuVectorOp: Sized {
+pub trait CuVectorOp {
 
     #[inline]
     fn len(&self) -> usize;
     #[inline]
     fn ptr(&self) -> *const f32;
 
-    fn slice<'a>(&'a self, offset: usize, len: usize) -> CuVectorSlice<'a, Self> {
+    fn slice<'a>(&'a self, offset: usize, len: usize) -> CuVectorSlice<'a, Self> where Self: Sized {
         CuVectorSlice {
             parent: PhantomData,
             len,
@@ -49,7 +49,7 @@ pub trait CuVectorOpMut: CuVectorOp {
     #[inline]
     fn ptr_mut(&mut self) -> *mut f32;
 
-    fn slice_mut<'a>(&'a mut self, offset: usize, len: usize) -> CuVectorSliceMut<'a, Self> {
+    fn slice_mut<'a>(&'a mut self, offset: usize, len: usize) -> CuVectorSliceMut<'a, Self> where Self: Sized {
         CuVectorSliceMut {
             parent: PhantomData,
             len,
@@ -62,8 +62,7 @@ pub trait CuVectorOpMut: CuVectorOp {
         assert_eq_usize(self.len(), "self.len()", data.len(), "data.len()");
         cuda_memcpy(self.ptr_mut(), data.as_ptr(), data.len()*size_of::<f32>(), CudaMemcpyKind::HostToDevice);
     }
-    fn clone_from_device<CuVectorOpT: CuVectorOp>
-    (&mut self, source: CuVectorOpT) {
+    fn clone_from_device(&mut self, source: &CuVectorOp) {
         assert_eq_usize(self.len(), "self.len()", source.len(), "data.len()");
         cuda_memcpy(self.ptr_mut(), source.ptr(), self.len()*size_of::<f32>(), CudaMemcpyKind::DeviceToDevice);
     }
@@ -79,13 +78,11 @@ pub trait CuVectorOpMut: CuVectorOp {
     fn scale_self(&mut self, value: f32) {
         unsafe { VectorKernel_scl(self.ptr(), self.ptr_mut(), self.len() as i32, value) }
     }
-    fn add_self<CuVectorOpT: CuVectorOp>
-    (&mut self, right_op: &CuVectorOpT) {
+    fn add_self(&mut self, right_op: &CuVectorOp) {
         assert_eq_usize(self.len(), "self.len()", right_op.len(), "right_op.len()");
         unsafe { VectorKernel_add(self.ptr(), right_op.ptr(), self.ptr_mut(), self.len() as i32) }
     }
-    fn pmult_self<CuVectorOpT: CuVectorOp>
-    (&mut self, right_op: &CuVectorOpT) {
+    fn pmult_self(&mut self, right_op: &CuVectorOp) {
         assert_eq_usize(self.len(), "self.len()", right_op.len(), "right_op.len()");
         unsafe { VectorKernel_pmult(self.ptr(), right_op.ptr(), self.ptr_mut(), self.len() as i32) }
     }

@@ -96,15 +96,15 @@ impl CuMatrix {
         }
     }
 
-    pub fn aypb<CuMatrixOpMutT: CuMatrixOpMut>
-    (a: f32, b: f32, y: &mut CuMatrixOpMutT) {
+    pub fn aypb(a: f32, b: f32, y: &mut CuMatrixOpMut) {
         unsafe { MatrixKernel_aYpb(a, b, y.ptr_mut(), y.leading_dimension() as i32, y.rows() as i32, y.cols() as i32) }
     }
 }
 
 
+
 #[cfg(test)]
-mod matrix {
+mod tests {
     use super::{CuMatrix, CuMatrixOp, CuMatrixOpMut};
 
     #[test]

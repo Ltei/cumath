@@ -46,7 +46,7 @@ impl<'a, T> CuMatrixOpMut for CuSubMatrixMut<'a, T> where T: CuMatrixOp + 'a  {
 
 
 #[cfg(test)]
-mod sub_matrix {
+mod tests {
     use super::{CuMatrix, CuMatrixOp, CuMatrixOpMut};
 
     #[test]

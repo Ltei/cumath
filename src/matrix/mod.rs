@@ -18,7 +18,7 @@ pub use self::sub_matrix::*;
 
 
 
-pub trait CuMatrixOp: Sized {
+pub trait CuMatrixOp {
 
     #[inline]
     fn rows(&self) -> usize;
@@ -31,7 +31,7 @@ pub trait CuMatrixOp: Sized {
     #[inline]
     fn ptr(&self) -> *const f32;
 
-    fn slice<'a>(&'a self, row_offset: usize, col_offset: usize, nb_rows: usize, nb_cols: usize) -> CuSubMatrix<'a, Self> {
+    fn slice<'a>(&'a self, row_offset: usize, col_offset: usize, nb_rows: usize, nb_cols: usize) -> CuSubMatrix<'a, Self> where Self: Sized {
         CuSubMatrix {
             parent: PhantomData,
             rows: nb_rows,
@@ -64,14 +64,14 @@ pub trait CuMatrixOp: Sized {
             println!()
         }
     }
-    fn assert_equals_float(a: f32, b: f32) {
+    fn assert_equals_float(a: f32, b: f32) where Self: Sized {
         let d = a-b;
         if d < -0.000001 || d > 0.000001 {
             panic!("{} != {}", a, b);
         }
     }
     #[allow(dead_code)]
-    fn dev_equals(&self, data: &[f32]) {
+    fn dev_equals(&self, data: &[f32]) where Self: Sized {
         assert_eq_usize(self.len(), "self.len()", data.len(), "data.len()");
         let mut buffer = vec![0.0; self.len()];
         self.clone_to_host(&mut buffer);
@@ -87,7 +87,7 @@ pub trait CuMatrixOpMut: CuMatrixOp  {
     #[inline]
     fn ptr_mut(&mut self) -> *mut f32;
 
-    fn slice_mut<'a>(&'a mut self, row_offset: usize, col_offset: usize, nb_rows: usize, nb_cols: usize) -> CuSubMatrixMut<'a, Self> {
+    fn slice_mut<'a>(&'a mut self, row_offset: usize, col_offset: usize, nb_rows: usize, nb_cols: usize) -> CuSubMatrixMut<'a, Self> where Self: Sized {
         CuSubMatrixMut {
             parent: PhantomData,
             rows: nb_rows,
@@ -107,7 +107,7 @@ pub trait CuMatrixOpMut: CuMatrixOp  {
                       self.cols(),
                       CudaMemcpyKind::HostToDevice);
     }
-    fn clone_from_device<DataT: CuMatrixOp>(&mut self, data: &DataT) {
+    fn clone_from_device(&mut self, data: &CuMatrixOp) {
         assert_eq_usize(self.len(), "self.len()", data.len(), "data.len()");
         cuda_memcpy2d(self.ptr_mut(),
                       self.leading_dimension() * size_of::<f32>(),
@@ -139,7 +139,7 @@ pub trait CuMatrixOpMut: CuMatrixOp  {
                                self.rows() as i32, self.cols() as i32, value);
         }
     }
-    fn add_self<ToAddT: CuMatrixOp>(&mut self, to_add: &ToAddT) {
+    fn add_self(&mut self, to_add: &CuMatrixOp) {
         unsafe {
             MatrixKernel_add(self.ptr(), self.leading_dimension() as i32,
                              to_add.ptr(), to_add.leading_dimension() as i32,
