@@ -23,10 +23,10 @@ fn main() {
 
     vector0.init(value0);
     vector1.init(value1);
-    vector0.slice_mut(2, 2).add_self(&vector1);
+    vector0.slice_mut(2 /*offset*/, 2 /*length*/).add_self(&vector1);
 
     let mut output = vec![0.0; 5];
-    vector0.copy_to_host(&mut output);
+    vector0.clone_to_host(&mut output);
 
     assert_equals_float(output[0], value0);
     assert_equals_float(output[1], value0);
