@@ -11,19 +11,18 @@ use ffi::curand_ffi::*;
 
 use assert::*;
 
-pub mod meta_tags;
-use meta_tags::*;
-
-pub mod cuvector;
-pub mod cumatrix;
-pub use cuvector::*;
-pub use cumatrix::*;
+mod tags;
+use tags::*;
+mod vector;
+pub use vector::*;
+mod matrix;
+pub use matrix::*;
 
 
 pub struct Cuda { }
 impl Cuda {
     pub fn synchronize() {
-        unsafe { cudaDeviceSynchronize() }.assert_success()
+        cuda_synchronize();
     }
 }
 
@@ -43,8 +42,8 @@ impl Cublas {
         Cublas { handle }
     }
 
-    pub fn mult_m_m<LeftT: CuMatrixOp, RightT: CuMatrixOp, OutputT: CuMatrixOpMut>
-                (&self, left_op: &LeftT, right_op: &RightT, output: &mut OutputT) {
+    pub fn mult_m_m<CuMatrixOpT1: CuMatrixOp, CuMatrixOpT2: CuMatrixOp, CuMatrixOpMutT: CuMatrixOpMut>
+                (&self, left_op: &CuMatrixOpT1, right_op: &CuMatrixOpT2, output: &mut CuMatrixOpMutT) {
         assert_eq_usize(left_op.cols(), "left_op.cols()", right_op.rows(), "right_op.rows()");
         assert_eq_usize(left_op.rows(), "left_op.rows()", output.rows(), "output.rows()");
         assert_eq_usize(right_op.cols(), "right_op.cols()", output.cols(), "output.cols()");
@@ -57,58 +56,58 @@ impl Cublas {
                            &0.0, output.ptr_mut(), output.rows() as i32)
         }.assert_success();
     }
-    pub fn mult_row_m<RightT: CuMatrixOp>
-                (&self, left_op: &CuVector, right_op: &RightT, output: &mut CuVector) {
-        assert_eq_usize(left_op.len, "left_op.len()", right_op.rows(), "right_op.rows()");
-        assert_eq_usize(right_op.cols(), "left_op.cols()", output.len, "output.len()");
+    pub fn mult_row_m<CuVectorOpT: CuVectorOp, CuMatrixOpT: CuMatrixOp, CuVectorOpMutT: CuVectorOpMut>
+    (&self, left_op: &CuVectorOpT, right_op: &CuMatrixOpT, output: &mut CuVectorOpMutT) {
+        assert_eq_usize(left_op.len(), "left_op.len()", right_op.rows(), "right_op.rows()");
+        assert_eq_usize(right_op.cols(), "right_op.cols()", output.len(), "output.len()");
         unsafe {
             cublasSgemv_v2(self.handle,
                            CublasOperation::Transpose,
-                           (right_op.rows() as i32), (right_op.cols() as i32), &1.0,
-                           right_op.ptr(), (right_op.rows() as i32),
-                           left_op.data, 1,
-                           &0.0, output.data, 1)
+                           right_op.rows() as i32, right_op.cols() as i32, &1.0,
+                           right_op.ptr(), right_op.rows() as i32,
+                           left_op.ptr(), 1,
+                           &0.0, output.ptr_mut(), 1)
         }.assert_success();
     }
-    pub fn mult_m_col<LeftT: CuMatrixOp>
-                (&self, left_op: &LeftT, right_op: &CuVector, output: &mut CuVector) {
-        assert_eq_usize(left_op.cols(), "left_op.cols()", right_op.len, "right_op.len()");
-        assert_eq_usize(left_op.rows(), "left_op.rows()", output.len, "output.len()");
+    pub fn mult_m_col<CuMatrixOpT: CuMatrixOp, CuVectorOpT: CuVectorOp, CuVectorOpMutT: CuVectorOpMut>
+    (&self, left_op: &CuMatrixOpT, right_op: &CuVectorOpT, output: &mut CuVectorOpMutT) {
+        assert_eq_usize(left_op.cols(), "left_op.cols()", right_op.len(), "right_op.len()");
+        assert_eq_usize(left_op.rows(), "left_op.rows()", output.len(), "output.len()");
         unsafe {
             cublasSgemv_v2(self.handle,
                            CublasOperation::None,
-                           (left_op.rows() as i32), (left_op.cols() as i32), &1.0,
-                           left_op.ptr(), (left_op.rows() as i32),
-                           right_op.data, 1,
-                           &0.0, output.data, 1)
+                           left_op.rows() as i32, left_op.cols() as i32, &1.0,
+                           left_op.ptr(), left_op.rows() as i32,
+                           right_op.ptr(), 1,
+                           &0.0, output.ptr_mut(), 1)
         }.assert_success();
     }
-    pub fn mult_col_row<OutputT: CuMatrixOpMut>
-                (&self, left_op: &CuVector, right_op: &CuVector, output: &mut OutputT) {
-        assert_eq_usize(left_op.len, "left_op.len()", output.rows(), "output.rows()");
-        assert_eq_usize(right_op.len, "right_op.len()", output.cols(), "output.cols()");
+    pub fn mult_col_row<CuVectorOpT1: CuVectorOp, CuVectorOpT2: CuVectorOp, CuMatrixOpMutT: CuMatrixOpMut>
+    (&self, left_op: &CuVectorOpT1, right_op: &CuVectorOpT2, output: &mut CuMatrixOpMutT) {
+        assert_eq_usize(left_op.len(), "left_op.len()", output.rows(), "output.rows()");
+        assert_eq_usize(right_op.len(), "right_op.len()", output.cols(), "output.cols()");
         unsafe {
             cublasSgemm_v2(self.handle,
                            CublasOperation::None, CublasOperation::None,
-                           (left_op.len as i32), (right_op.len as i32), 1, &1.0,
-                           left_op.data, (left_op.len as i32),
-                           right_op.data, 1,
-                           &0.0, output.ptr_mut(), (output.rows() as i32))
+                           left_op.len() as i32, right_op.len() as i32, 1, &1.0,
+                           left_op.ptr(), left_op.len() as i32,
+                           right_op.ptr(), 1,
+                           &0.0, output.ptr_mut(), output.rows() as i32)
         }.assert_success();
     }
 
     /** output = out_scl * output + in_scl * left_op * right_op */
-    pub fn mult_col_row_<OutputT: CuMatrixOpMut>
-                (&self, left_op: &CuVector, right_op: &CuVector, output: &mut OutputT, in_scl: f32, out_scl: f32) {
-        assert_eq_usize(left_op.len, "left_op.len()", output.rows(), "output.rows()");
-        assert_eq_usize(right_op.len, "right_op.len()", output.cols(), "output.cols()");
+    pub fn mult_col_row_<CuVectorOpT1: CuVectorOp, CuVectorOpT2: CuVectorOp, CuMatrixOpMutT: CuMatrixOpMut>
+    (&self, left_op: &CuVectorOpT1, right_op: &CuVectorOpT2, output: &mut CuMatrixOpMutT, in_scl: f32, out_scl: f32) {
+        assert_eq_usize(left_op.len(), "left_op.len()", output.rows(), "output.rows()");
+        assert_eq_usize(right_op.len(), "right_op.len()", output.cols(), "output.cols()");
         unsafe {
             cublasSgemm_v2(self.handle,
                            CublasOperation::None, CublasOperation::None,
-                           (left_op.len as i32), (right_op.len as i32), 1, &in_scl,
-                           left_op.data, (left_op.len as i32),
-                           right_op.data, 1,
-                           &out_scl, output.ptr_mut(), (output.rows() as i32))
+                           left_op.len() as i32, right_op.len() as i32, 1, &in_scl,
+                           left_op.ptr(), left_op.len() as i32,
+                           right_op.ptr(), 1,
+                           &out_scl, output.ptr_mut(), output.rows() as i32)
         }.assert_success();
     }
 
@@ -117,21 +116,23 @@ impl Cublas {
         unsafe { cublasSasum_v2(self.handle, matrix.len as i32, matrix.data, 1, &mut output) }.assert_success();
         output
     }*/
-    pub fn asum_v(&self, vector: &CuVector) -> f32 {
+    pub fn asum_v<CuVectorOpT: CuVectorOp>
+    (&self, vector: &CuVectorOpT) -> f32 {
         let mut output = 0.0;
-        unsafe { cublasSasum_v2(self.handle, vector.len as i32, vector.data, 1, &mut output) }.assert_success();
+        unsafe { cublasSasum_v2(self.handle, vector.len() as i32, vector.ptr(), 1, &mut output) }.assert_success();
         output
     }
 
-    pub fn axpy_m<XT: CuMatrixOp, YT : CuMatrixOpMut>
-                (&self, alpha: f32, x: &XT, y: &mut YT) {
+    pub fn axpy_m<CuMatrixOpT: CuMatrixOp, CuMatrixOpMutT: CuMatrixOpMut>
+    (&self, alpha: f32, x: &CuMatrixOpT, y: &mut CuMatrixOpMutT) {
         unsafe {
             cublasSaxpy_v2(self.handle, x.len() as i32, &alpha, x.ptr(), 1, y.ptr_mut(), 1)
         }.assert_success()
     }
-    pub fn axpy_v(&self, alpha: f32, x: &CuVector, y: &mut CuVector) {
+    pub fn axpy_v<CuVectorOpT: CuVectorOp, CuVectorOpMutT: CuVectorOpMut>
+    (&self, alpha: f32, x: &CuVectorOpT, y: &mut CuVectorOpMutT) {
         unsafe {
-            cublasSaxpy_v2(self.handle, x.len() as i32, &alpha, x.data, 1, y.data, 1)
+            cublasSaxpy_v2(self.handle, x.len() as i32, &alpha, x.ptr(), 1, y.ptr_mut(), 1)
         }.assert_success()
     }
 }
@@ -151,19 +152,29 @@ impl CurandGenerator {
         CurandGenerator { handle }
     }
 
-    pub fn generate_uniform_v(&mut self, output: &mut CuVector) {
-        unsafe { curandGenerateUniform(self.handle, output.data, output.len) }.assert_success();
-    }
-
-    pub fn generate_uniform_m<T: CuMatrixOpMut + CuPacked>(&mut self, output: &mut T) {
+    pub fn generate_uniform_v<CuVectorOpMutT: CuVectorOpMut>
+    (&mut self, output: &mut CuVectorOpMutT) {
         unsafe { curandGenerateUniform(self.handle, output.ptr_mut(), output.len()) }.assert_success();
     }
-    pub fn generate_uniform_range_m<T: CuMatrixOpMut + CuPacked>(&mut self, output: &mut T, min: f32, max: f32) {
-        assert!(min < max);
+    pub fn generate_uniform_range_v<CuVectorOpMutT: CuVectorOpMut>
+    (&mut self, output: &mut CuVectorOpMutT, min: f32, max: f32) {
+        assert!(min <= max);
         unsafe {
             curandGenerateUniform(self.handle, output.ptr_mut(), output.len()).assert_success();
-            output.add_value_self(-0.5);
-            output.scale_self(max-min);
+            CuVector::aypb(max-min, min, output);
+        }
+    }
+
+    pub fn generate_uniform_m<CuMatrixOpMutPackedT: CuMatrixOpMut + CuPacked>
+    (&mut self, output: &mut CuMatrixOpMutPackedT) {
+        unsafe { curandGenerateUniform(self.handle, output.ptr_mut(), output.len()) }.assert_success();
+    }
+    pub fn generate_uniform_range_m<CuMatrixOpMutPackedT: CuMatrixOpMut + CuPacked>
+    (&mut self, output: &mut CuMatrixOpMutPackedT, min: f32, max: f32) {
+        assert!(min <= max);
+        unsafe {
+            curandGenerateUniform(self.handle, output.ptr_mut(), output.len()).assert_success();
+            CuMatrix::aypb(max-min, min, output);
         }
     }
 }
@@ -268,7 +279,7 @@ mod tests {
     }
 
     #[test]
-    fn curand_generate_uniform() {
+    fn curand_generate_uniform_v() {
         let mut generator = CurandGenerator::new();
 
         let mut vector = CuVector::new(10, 0.0);
@@ -279,6 +290,24 @@ mod tests {
 
         buffer.iter().for_each(|x| {
             assert!(x >= &0.0 && x <= &1.0);
+        });
+    }
+
+    #[test]
+    fn curand_generate_uniform_range_v() {
+        let min = -5.0;
+        let max = 15.0;
+
+        let mut generator = CurandGenerator::new();
+
+        let mut vector = CuVector::new(10, 0.0);
+        generator.generate_uniform_range_v(&mut vector, min, max);
+
+        let mut buffer = vec![0.0; 10];
+        vector.clone_to_host(&mut buffer);
+
+        buffer.iter().for_each(|x| {
+            assert!(*x >= min && *x <= max);
         });
     }
 }

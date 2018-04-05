@@ -106,16 +106,16 @@ pub enum CudaMemcpyKind {
 
 
 extern {
-    pub fn cudaMalloc(devPtr: *mut*mut c_void, size: usize) -> CudaError;
+    fn cudaMalloc(devPtr: *mut*mut c_void, size: usize) -> CudaError;
 
-    pub fn cudaFree(dev_ptr: *mut c_void) -> CudaError;
+    fn cudaFree(dev_ptr: *mut c_void) -> CudaError;
 
-    pub fn cudaMemcpy(dst: *mut c_void,
+    fn cudaMemcpy(dst: *mut c_void,
                       src: *const c_void,
                       count: usize,
                       kind: CudaMemcpyKind) -> CudaError;
 
-    pub fn cudaMemcpy2D(dst: *mut c_void,
+    fn cudaMemcpy2D(dst: *mut c_void,
                         dpitch: usize,
                         src: *const c_void,
                         spitch: usize,
@@ -123,5 +123,31 @@ extern {
                         height: usize,
                         kind: CudaMemcpyKind) -> CudaError;
 
-    pub fn cudaDeviceSynchronize() -> CudaError;
+    fn cudaDeviceSynchronize() -> CudaError;
+}
+
+
+#[inline]
+pub fn cuda_malloc(ptr: *mut*mut f32, size: usize) {
+    unsafe { cudaMalloc(ptr as *mut*mut c_void, size) }.assert_success()
+}
+
+#[inline]
+pub fn cuda_free(dev_ptr: *mut f32) {
+    unsafe { cudaFree(dev_ptr as *mut c_void) }.assert_success()
+}
+
+#[inline]
+pub fn cuda_memcpy(dst: *mut f32, src: *const f32, count: usize, kind: CudaMemcpyKind) {
+    unsafe { cudaMemcpy(dst as *mut c_void, src as *mut c_void, count, kind) }.assert_success()
+}
+
+#[inline]
+pub fn cuda_memcpy2d(dst: *mut f32, dpitch: usize, src: *const f32, spitch: usize, width: usize, height: usize, kind: CudaMemcpyKind) {
+    unsafe { cudaMemcpy2D(dst as *mut c_void, dpitch, src as *mut c_void, spitch, width, height, kind) }.assert_success()
+}
+
+#[inline]
+pub fn cuda_synchronize() {
+    unsafe { cudaDeviceSynchronize() }.assert_success()
 }

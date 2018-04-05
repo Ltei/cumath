@@ -43,6 +43,12 @@ __global__ void kernel_sigmoidDeriv(float* vector, float* output, int len) {
     }
 }
 
+__global__ void kernel_aYpb(float a, float b, float* Y, int len) {
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid < len) {
+        Y[tid] = a*Y[tid] + b;
+    }
+}
 __global__ void kernel_aXpb_Y(float a, float* X, float b, float* Y, int len) {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid < len) {
@@ -131,6 +137,15 @@ extern "C" {
         kernel_sigmoidDeriv <<<gridDim, blockDim>>> (vector, output, len);
     }
 
+    void VectorKernel_aYpb(float a, float b, float* Y, int len) {
+        dim3 gridDim;
+        dim3 blockDim;
+
+        blockDim.x = 1024;
+        gridDim.x = (len + blockDim.x - 1) / blockDim.x;
+
+        kernel_aYpb <<<gridDim, blockDim>>> (a, b, Y, len);
+    }
     void VectorKernel_aXpb_Y(float a, float* X, float b, float* Y, int len) {
         dim3 gridDim;
         dim3 blockDim;

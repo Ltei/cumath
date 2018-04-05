@@ -30,6 +30,14 @@ __global__ void kernel_add(float* left_op, int left_op_ld, float* right_op, int 
     }
 }
 
+__global__ void kernel_aYpb(float a, float b, float* Y, int Y_ld, int rows, int cols) {
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+    if (row < rows && col < cols) {
+        Y[row+col*Y_ld] = a*Y[row+col*Y_ld] + b;
+    }
+}
+
 extern "C" {
     void MatrixKernel_init(float* matrix, int ld, int rows, int cols, float value) {
         dim3 blockDim(32, 32);
@@ -59,5 +67,13 @@ extern "C" {
                      (cols + blockDim.y - 1) / blockDim.y);
 
         kernel_add <<<gridDim, blockDim>>> (left_op, left_op_ld, right_op, right_op_ld, output, output_ld, rows, cols);
+    }
+
+    void MatrixKernel_aYpb(float a, float b, float* Y, int Y_ld, int rows, int cols) {
+        dim3 blockDim(32, 32);
+        dim3 gridDim((rows + blockDim.x - 1) / blockDim.x,
+                     (cols + blockDim.y - 1) / blockDim.y);
+
+        kernel_aYpb <<<gridDim, blockDim>>> (a, b, Y, Y_ld, rows, cols);
     }
 }
