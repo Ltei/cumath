@@ -107,6 +107,13 @@ impl CuMatrix {
 mod tests {
     use super::{CuMatrix, CuMatrixOp, CuMatrixOpMut};
 
+    fn assert_equals_float(a: f32, b: f32) {
+        let d = a-b;
+        if d < -0.000001 || d > 0.000001 {
+            panic!("{} != {}", a, b);
+        }
+    }
+
     #[test]
     fn getters() {
         let matrix = CuMatrix::new(4, 8, 0.0);
@@ -157,6 +164,23 @@ mod tests {
         matrix.slice(0, 1, 3, 1).dev_equals(&[0.1, 1.1, 2.1]);
         matrix.slice(1, 0, 2, 2).slice(0, 1, 1, 1).dev_equals(&[1.1]);
         matrix.slice_col(1, 1).slice(1, 0, 1, 1).dev_equals(&[1.1]);
+    }
+
+    #[test]
+    fn aypb() {
+        let a = -1.0;
+        let b = 22.142544;
+        let data = &[0.0, 1.0, 2.0, 0.1, 1.1, 2.1];
+        let mut matrix = super::CuMatrix::from_data(3, 2, data);
+
+        CuMatrix::aypb(a, b, &mut matrix);
+
+        let output = &mut [0.0; 6];
+        matrix.clone_to_host(output);
+
+        for i in 0..data.len() {
+            assert_equals_float(output[i], a*data[i]+b);
+        }
     }
 
 }
