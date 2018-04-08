@@ -1,10 +1,9 @@
 
 
 use std::{marker::PhantomData, mem::size_of};
-use assert::*;
-use ffi::cuda_ffi::*;
 
-use ffi::matrixkernel_ffi::*;
+use meta::{codec::*, assert::*};
+use ffi::{cuda_ffi::*, matrixkernel_ffi::*};
 
 
 
@@ -17,20 +16,35 @@ pub use self::sub_matrix::*;
 
 
 
-
+/// Immutable matrix operator trait.
 pub trait CuMatrixOp {
 
+    /// [inline]
+    /// Returns the number of rows in the matrix.
     #[inline]
     fn rows(&self) -> usize;
+
+    /// [inline]
+    /// Returns the number of columns in the matrix.
     #[inline]
     fn cols(&self) -> usize;
+
+    /// [inline]
+    /// Returns the number of elements in the matrix.
     #[inline]
     fn len(&self) -> usize;
+
+    /// [inline]
+    /// Returns the leading dimension of the matrix.
     #[inline]
     fn leading_dimension(&self) -> usize;
+
+    /// [inline]
+    /// Returns a pointer on the matrix's data.
     #[inline]
     fn ptr(&self) -> *const f32;
 
+    /// Returns an immutable sub-matrix.
     fn slice<'a>(&'a self, row_offset: usize, col_offset: usize, nb_rows: usize, nb_cols: usize) -> CuSubMatrix<'a, Self> where Self: Sized {
         CuSubMatrix {
             parent: PhantomData,
@@ -41,6 +55,7 @@ pub trait CuMatrixOp {
         }
     }
 
+    /// Clone this matrix's data to host memory.
     fn clone_to_host(&self, data: &mut [f32]) {
         assert_eq_usize(self.len(), "self.len()", data.len(), "data.len()");
         cuda_memcpy2d(data.as_mut_ptr(),
@@ -51,6 +66,7 @@ pub trait CuMatrixOp {
                      self.cols(),
                      CudaMemcpyKind::DeviceToHost);
     }
+
 
     #[allow(dead_code)]
     fn dev_print(&self, msg: &str) {
@@ -64,26 +80,22 @@ pub trait CuMatrixOp {
             println!()
         }
     }
-    fn assert_equals_float(a: f32, b: f32) where Self: Sized {
-        let d = a-b;
-        if d < -0.000001 || d > 0.000001 {
-            panic!("{} != {}", a, b);
-        }
-    }
     #[allow(dead_code)]
-    fn dev_equals(&self, data: &[f32]) where Self: Sized {
+    fn dev_assert_equals(&self, data: &[f32]) where Self: Sized {
         assert_eq_usize(self.len(), "self.len()", data.len(), "data.len()");
         let mut buffer = vec![0.0; self.len()];
         self.clone_to_host(&mut buffer);
         let mut iter = buffer.iter();
-        data.iter().for_each(|x| { Self::assert_equals_float(*x, *iter.next().unwrap()) });
+        data.iter().for_each(|x| { assert_equals_float(*x, *iter.next().unwrap()) });
     }
 
 }
 
-
+/// Mutable matrix operator trait.
 pub trait CuMatrixOpMut: CuMatrixOp  {
 
+    /// [inline]
+    /// Returns a mutable pointer on the matrix's data
     #[inline]
     fn ptr_mut(&mut self) -> *mut f32;
 
@@ -146,6 +158,51 @@ pub trait CuMatrixOpMut: CuMatrixOp  {
                              self.ptr_mut(), self.leading_dimension() as i32,
                              self.rows() as i32, self.cols() as i32)
         }
+    }
+
+}
+
+
+
+impl Codec for CuMatrix {
+    type OutputType = CuMatrix;
+
+    fn encode(&self) -> String {
+        let mut host_data = vec![0.0; self.len()];
+        self.clone_to_host(host_data.as_mut_slice());
+
+        let mut output = format!("{} {} ", self.rows(), self.cols());
+        host_data.iter().for_each(|x| {
+            output.push_str(&format!("{} ", x))
+        });
+        output
+    }
+    fn decode(data: &str) -> CuMatrix {
+        let mut split = data.split_whitespace();
+        let rows = split.next().unwrap().parse::<usize>().unwrap();
+        let cols = split.next().unwrap().parse::<usize>().unwrap();
+        CuMatrix::from_data(rows, cols,
+            split.map(|x| {
+                x.parse::<f32>().unwrap_or_else(|err| { panic!("{}", err) })
+            }).collect::<Vec<f32>>().as_slice()
+        )
+    }
+}
+
+
+
+
+// TESTS
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn codec() {
+        let data = [1.2, -2.2656146, 7.12, 2.0, 4.5, 7.256];
+        CuMatrix::decode(&CuMatrix::from_data(2, 3, &data).encode()).dev_assert_equals(&data);
     }
 
 }

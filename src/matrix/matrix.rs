@@ -1,10 +1,8 @@
 
 use std::{ptr, mem::size_of};
 
-use assert::*;
-use tags::*;
-
 use super::*;
+use meta::tags::CuPacked;
 use ffi::vectorkernel_ffi::*;
 
 
@@ -158,12 +156,12 @@ mod tests {
         let data = &[0.0, 1.0, 2.0, 0.1, 1.1, 2.1];
         let matrix = super::CuMatrix::from_data(3, 2, data);
 
-        matrix.dev_equals(data);
-        matrix.slice(0, 0, 3, 2).dev_equals(data);
-        matrix.slice(1, 0, 1, 2).dev_equals(&[1.0, 1.1]);
-        matrix.slice(0, 1, 3, 1).dev_equals(&[0.1, 1.1, 2.1]);
-        matrix.slice(1, 0, 2, 2).slice(0, 1, 1, 1).dev_equals(&[1.1]);
-        matrix.slice_col(1, 1).slice(1, 0, 1, 1).dev_equals(&[1.1]);
+        matrix.dev_assert_equals(data);
+        matrix.slice(0, 0, 3, 2).dev_assert_equals(data);
+        matrix.slice(1, 0, 1, 2).dev_assert_equals(&[1.0, 1.1]);
+        matrix.slice(0, 1, 3, 1).dev_assert_equals(&[0.1, 1.1, 2.1]);
+        matrix.slice(1, 0, 2, 2).slice(0, 1, 1, 1).dev_assert_equals(&[1.1]);
+        matrix.slice_col(1, 1).slice(1, 0, 1, 1).dev_assert_equals(&[1.1]);
     }
 
     #[test]

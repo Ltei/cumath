@@ -1,7 +1,10 @@
 
 
 use std::ptr;
+
 use super::*;
+use ffi::cublas_ffi::*;
+use meta::assert::*;
 
 
 

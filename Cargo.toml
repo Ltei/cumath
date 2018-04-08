@@ -1,3 +1,5 @@
+
+
 [package]
 name = "cumath"
 description = "Cuda-based matrix/vector computations"
@@ -6,6 +8,7 @@ repository = "https://github.com/Ltei/cumath"
 authors = ["ltei"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
+keywords = ["cuda", "computation", "gpu", "matrix", "vector"]
 build = "build.rs"
 exclude = [
     ".gitignore",
@@ -14,7 +17,6 @@ exclude = [
 ]
 
 [dependencies]
-libc = "0.2.39"
 
 [build-dependencies]
 cc = "1.0"
