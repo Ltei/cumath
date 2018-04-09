@@ -5,9 +5,11 @@ use super::*;
 
 
 
+/// A vector.
+/// Holds a pointer to continuous GPU memory.
 pub struct CuVector {
-    len: usize,
-    ptr: *mut f32,
+    pub(crate) len: usize,
+    pub(crate) ptr: *mut f32,
 }
 impl Drop for CuVector {
     fn drop(&mut self) {
@@ -16,18 +18,22 @@ impl Drop for CuVector {
 }
 impl CuVectorOp for CuVector {
     fn len(&self) -> usize { self.len }
-    fn ptr(&self) -> *const f32 { self.ptr }
+    fn as_ptr(&self) -> *const f32 { self.ptr }
 }
 impl CuVectorOpMut for CuVector {
-    fn ptr_mut(&mut self) -> *mut f32 { self.ptr }
+    fn as_mut_ptr(&mut self) -> *mut f32 { self.ptr }
 }
 impl CuVector {
+
+    /// Returns a new GPU-allocated vector from a length and an initial value.
     pub fn new(len: usize, init_value: f32) -> CuVector {
         let mut data = ptr::null_mut();
         cuda_malloc(&mut data, len*size_of::<f32>());
         unsafe { VectorKernel_init(data as *mut f32, len as i32, init_value) }
         CuVector { len, ptr: (data as *mut f32) }
     }
+
+    /// Returns a new GPU-allocated vector from CPU data.
     pub fn from_data(data: &[f32]) -> CuVector {
         let mut output = {
             let len = data.len();
@@ -39,56 +45,63 @@ impl CuVector {
         output
     }
 
+    /// output[i] = vector[i] + value
     pub fn add_value(vector: &CuVectorOp, value: f32, output: &mut CuVectorOpMut) {
-        unsafe { VectorKernel_addValue(vector.ptr(), output.ptr_mut(), vector.len() as i32, value) }
+        unsafe { VectorKernel_addValue(vector.as_ptr(), output.as_mut_ptr(), vector.len() as i32, value) }
     }
+    /// output[i] = vector[i] * value
     pub fn scale(vector: &CuVectorOp, value: f32, output: &mut CuVectorOpMut) {
-        unsafe { VectorKernel_scl(vector.ptr(), output.ptr_mut(), vector.len() as i32, value) }
+        unsafe { VectorKernel_scl(vector.as_ptr(), output.as_mut_ptr(), vector.len() as i32, value) }
     }
+    /// output[i] = left_op[i] + right_op[i]
     pub fn add(left_op: &CuVectorOp, right_op: &CuVectorOp, output: &mut CuVectorOpMut) {
         assert_eq_usize(left_op.len(), "left_op.len()", right_op.len(), "right_op.len()");
         assert_eq_usize(left_op.len(), "left_op.len()", output.len(), "output.len()");
-        unsafe { VectorKernel_add(left_op.ptr(), right_op.ptr(), output.ptr_mut(), left_op.len() as i32) }
+        unsafe { VectorKernel_add(left_op.as_ptr(), right_op.as_ptr(), output.as_mut_ptr(), left_op.len() as i32) }
     }
+    /// output[i] = left_op[i] - right_op[i]
     pub fn sub(left_op: &CuVectorOp, right_op: &CuVectorOp, output: &mut CuVectorOpMut) {
         assert_eq_usize(left_op.len(), "left_op.len()", right_op.len(), "right_op.len()");
         assert_eq_usize(left_op.len(), "left_op.len()", output.len(), "output.len()");
-        unsafe { VectorKernel_sub(left_op.ptr(),
-                                  right_op.ptr(),
-                                  output.ptr_mut(),
+        unsafe { VectorKernel_sub(left_op.as_ptr(),
+                                  right_op.as_ptr(),
+                                  output.as_mut_ptr(),
                                   left_op.len() as i32) }
     }
+    /// output[i] = left_op[i] * right_op[i]
     pub fn pmult(left_op: &CuVectorOp, right_op: &CuVectorOp, output: &mut CuVectorOpMut) {
         assert_eq_usize(left_op.len(), "left_op.len()", right_op.len(), "right_op.len()");
         assert_eq_usize(left_op.len(), "left_op.len()", output.len(), "output.len()");
-        unsafe { VectorKernel_pmult(left_op.ptr(),
-                                    right_op.ptr(),
-                                    output.ptr_mut(),
+        unsafe { VectorKernel_pmult(left_op.as_ptr(),
+                                    right_op.as_ptr(),
+                                    output.as_mut_ptr(),
                                     left_op.len() as i32) }
     }
+    /// output[i] = sigmoid(vector[i])
     pub fn sigmoid(vector: &CuVectorOp, output: &mut CuVectorOpMut) {
         assert_eq_usize(vector.len(), "vector.len()", output.len(), "output.len()");
-        unsafe { VectorKernel_sigmoid(vector.ptr(),output.ptr_mut(), vector.len() as i32) }
+        unsafe { VectorKernel_sigmoid(vector.as_ptr(), output.as_mut_ptr(), vector.len() as i32) }
     }
+    /// output[i] = sigmoid_deriv(vector[i])
     pub fn sigmoid_deriv(vector: &CuVectorOp, output: &mut CuVectorOpMut) {
         assert_eq_usize(vector.len(), "vector.len()", output.len(), "output.len()");
-        unsafe { VectorKernel_sigmoidDeriv(vector.ptr(), output.ptr_mut(), vector.len() as i32) }
+        unsafe { VectorKernel_sigmoidDeriv(vector.as_ptr(), output.as_mut_ptr(), vector.len() as i32) }
     }
 
-    /** y[i] = a*y[i]+b */
+    /// y[i] = a*y[i]+b
     pub fn aypb(a: f32, b: f32, y: &mut CuVectorOpMut) {
-        unsafe { VectorKernel_aYpb(a, b, y.ptr_mut(), y.len() as i32) }
+        unsafe { VectorKernel_aYpb(a, b, y.as_mut_ptr(), y.len() as i32) }
     }
-    /** y[i] *= (a*x[i])+b */
+    /// y[i] *= (a*x[i])+b
     pub fn axpb_y(a: f32, x: &CuVectorOp, b: f32, y: &mut CuVectorOpMut) {
         assert_eq_usize(x.len(), "x.len()", y.len(), "y.len()");
-        unsafe { VectorKernel_aXpb_Y(a, x.ptr(), b, y.ptr_mut(), x.len() as i32) }
+        unsafe { VectorKernel_aXpb_Y(a, x.as_ptr(), b, y.as_mut_ptr(), x.len() as i32) }
     }
-    /** y[i] += x[i] * v[i] */
+    /// y[i] += x[i] * v[i]
     pub fn xvpy(x: &CuVectorOp, v: &CuVectorOp, y: &mut CuVectorOpMut) {
         assert_eq_usize(x.len(), "x.len()", v.len(), "v.len()");
         assert_eq_usize(x.len(), "x.len()", y.len(), "y.len()");
-        unsafe { VectorKernel_XVpY(x.ptr(), v.ptr(), y.ptr_mut(), x.len() as i32) }
+        unsafe { VectorKernel_XVpY(x.as_ptr(), v.as_ptr(), y.as_mut_ptr(), x.len() as i32) }
     }
 }
 

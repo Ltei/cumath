@@ -5,14 +5,14 @@ use super::*;
 
 // CuSubMatrix
 
-pub struct CuSubMatrix<'a, T> where T: CuMatrixOp + 'a {
-    pub(super) parent: PhantomData<&'a T>,
+pub struct CuSubMatrix<'a> {
+    pub(super) parent: PhantomData<&'a CuMatrixOp>,
     pub(super) rows: usize,
     pub(super) cols: usize,
     pub(super) leading_dimension: usize,
     pub(super) ptr: *const f32,
 }
-impl<'a, T> CuMatrixOp for CuSubMatrix<'a, T> where T: CuMatrixOp + 'a  {
+impl<'a> CuMatrixOp for CuSubMatrix<'a>  {
     fn rows(&self) -> usize { self.rows }
     fn cols(&self) -> usize { self.cols }
     fn len(&self) -> usize { self.rows*self.cols }
@@ -23,21 +23,21 @@ impl<'a, T> CuMatrixOp for CuSubMatrix<'a, T> where T: CuMatrixOp + 'a  {
 
 // CuSubMatrixMut
 
-pub struct CuSubMatrixMut<'a, T> where T: CuMatrixOp + 'a {
-    pub(super) parent: PhantomData<&'a T>,
+pub struct CuSubMatrixMut<'a> {
+    pub(super) parent: PhantomData<&'a CuMatrixOpMut>,
     pub(super) rows: usize,
     pub(super) cols: usize,
     pub(super) leading_dimension: usize,
     pub(super) ptr: *mut f32,
 }
-impl<'a, T> CuMatrixOp for CuSubMatrixMut<'a, T> where T: CuMatrixOp + 'a  {
+impl<'a> CuMatrixOp for CuSubMatrixMut<'a>  {
     fn rows(&self) -> usize { self.rows }
     fn cols(&self) -> usize { self.cols }
     fn len(&self) -> usize { self.rows*self.cols }
     fn leading_dimension(&self) -> usize { self.leading_dimension }
     fn ptr(&self) -> *const f32 { self.ptr }
 }
-impl<'a, T> CuMatrixOpMut for CuSubMatrixMut<'a, T> where T: CuMatrixOp + 'a  {
+impl<'a> CuMatrixOpMut for CuSubMatrixMut<'a>  {
     fn ptr_mut(&mut self) -> *mut f32 { self.ptr }
 }
 

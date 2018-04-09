@@ -45,7 +45,7 @@ pub trait CuMatrixOp {
     fn ptr(&self) -> *const f32;
 
     /// Returns an immutable sub-matrix.
-    fn slice<'a>(&'a self, row_offset: usize, col_offset: usize, nb_rows: usize, nb_cols: usize) -> CuSubMatrix<'a, Self> where Self: Sized {
+    fn slice<'a>(&'a self, row_offset: usize, col_offset: usize, nb_rows: usize, nb_cols: usize) -> CuSubMatrix<'a> {
         CuSubMatrix {
             parent: PhantomData,
             rows: nb_rows,
@@ -59,12 +59,12 @@ pub trait CuMatrixOp {
     fn clone_to_host(&self, data: &mut [f32]) {
         assert_eq_usize(self.len(), "self.len()", data.len(), "data.len()");
         cuda_memcpy2d(data.as_mut_ptr(),
-                     self.rows() * size_of::<f32>(),
-                     self.ptr(),
-                     self.leading_dimension() * size_of::<f32>(),
-                     self.rows() * size_of::<f32>(),
-                     self.cols(),
-                     CudaMemcpyKind::DeviceToHost);
+                      self.rows() * size_of::<f32>(),
+                      self.ptr(),
+                      self.leading_dimension() * size_of::<f32>(),
+                      self.rows() * size_of::<f32>(),
+                      self.cols(),
+                      CudaMemcpyKind::DeviceToHost);
     }
 
 
@@ -99,7 +99,7 @@ pub trait CuMatrixOpMut: CuMatrixOp  {
     #[inline]
     fn ptr_mut(&mut self) -> *mut f32;
 
-    fn slice_mut<'a>(&'a mut self, row_offset: usize, col_offset: usize, nb_rows: usize, nb_cols: usize) -> CuSubMatrixMut<'a, Self> where Self: Sized {
+    fn slice_mut<'a>(&'a mut self, row_offset: usize, col_offset: usize, nb_rows: usize, nb_cols: usize) -> CuSubMatrixMut<'a> {
         CuSubMatrixMut {
             parent: PhantomData,
             rows: nb_rows,

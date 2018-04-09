@@ -44,8 +44,8 @@ impl Cublas {
                            CublasOperation::Transpose,
                            right_op.rows() as i32, right_op.cols() as i32, &1.0,
                            right_op.ptr(), right_op.rows() as i32,
-                           left_op.ptr(), 1,
-                           &0.0, output.ptr_mut(), 1)
+                           left_op.as_ptr(), 1,
+                           &0.0, output.as_mut_ptr(), 1)
         }.assert_success();
     }
     pub fn mult_m_col(&self, left_op: &CuMatrixOp, right_op: &CuVectorOp, output: &mut CuVectorOpMut) {
@@ -56,8 +56,8 @@ impl Cublas {
                            CublasOperation::None,
                            left_op.rows() as i32, left_op.cols() as i32, &1.0,
                            left_op.ptr(), left_op.rows() as i32,
-                           right_op.ptr(), 1,
-                           &0.0, output.ptr_mut(), 1)
+                           right_op.as_ptr(), 1,
+                           &0.0, output.as_mut_ptr(), 1)
         }.assert_success();
     }
     pub fn mult_col_row(&self, left_op: &CuVectorOp, right_op: &CuVectorOp, output: &mut CuMatrixOpMut) {
@@ -67,8 +67,8 @@ impl Cublas {
             cublasSgemm_v2(self.handle,
                            CublasOperation::None, CublasOperation::None,
                            left_op.len() as i32, right_op.len() as i32, 1, &1.0,
-                           left_op.ptr(), left_op.len() as i32,
-                           right_op.ptr(), 1,
+                           left_op.as_ptr(), left_op.len() as i32,
+                           right_op.as_ptr(), 1,
                            &0.0, output.ptr_mut(), output.rows() as i32)
         }.assert_success();
     }
@@ -81,8 +81,8 @@ impl Cublas {
             cublasSgemm_v2(self.handle,
                            CublasOperation::None, CublasOperation::None,
                            left_op.len() as i32, right_op.len() as i32, 1, &in_scl,
-                           left_op.ptr(), left_op.len() as i32,
-                           right_op.ptr(), 1,
+                           left_op.as_ptr(), left_op.len() as i32,
+                           right_op.as_ptr(), 1,
                            &out_scl, output.ptr_mut(), output.rows() as i32)
         }.assert_success();
     }
@@ -94,7 +94,7 @@ impl Cublas {
     }*/
     pub fn asum_v(&self, vector: &CuVectorOp) -> f32 {
         let mut output = 0.0;
-        unsafe { cublasSasum_v2(self.handle, vector.len() as i32, vector.ptr(), 1, &mut output) }.assert_success();
+        unsafe { cublasSasum_v2(self.handle, vector.len() as i32, vector.as_ptr(), 1, &mut output) }.assert_success();
         output
     }
 
@@ -105,8 +105,16 @@ impl Cublas {
     }
     pub fn axpy_v(&self, alpha: f32, x: &CuVectorOp, y: &mut CuVectorOpMut) {
         unsafe {
-            cublasSaxpy_v2(self.handle, x.len() as i32, &alpha, x.ptr(), 1, y.ptr_mut(), 1)
+            cublasSaxpy_v2(self.handle, x.len() as i32, &alpha, x.as_ptr(), 1, y.as_mut_ptr(), 1)
         }.assert_success()
+    }
+
+    pub fn clone_weighted_from_device_m(&self, data: &[&CuMatrixOp], weights: &[f32], output: &mut CuMatrixOpMut) {
+        assert_eq_usize(data.len(), "data.len()", weights.len(), "weights.len()");
+        output.init(0.0);
+        for i in 0..data.len() {
+            self.axpy_m(weights[i], data[i], output);
+        }
     }
 }
 

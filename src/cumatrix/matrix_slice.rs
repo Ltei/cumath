@@ -3,7 +3,6 @@ use std::mem::size_of;
 
 
 use super::*;
-use meta::tags::CuPacked;
 use ffi::vectorkernel_ffi::*;
 
 

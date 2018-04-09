@@ -2,7 +2,6 @@
 use std::{ptr, mem::size_of};
 
 use super::*;
-use meta::tags::CuPacked;
 use ffi::vectorkernel_ffi::*;
 
 
@@ -10,10 +9,10 @@ use ffi::vectorkernel_ffi::*;
 // CuMatrix
 
 pub struct CuMatrix {
-    rows: usize,
-    cols: usize,
-    len: usize,
-    ptr: *mut f32,
+    pub(crate) rows: usize,
+    pub(crate) cols: usize,
+    pub(crate) len: usize,
+    pub(crate) ptr: *mut f32,
 }
 impl Drop for CuMatrix {
     fn drop(&mut self) {

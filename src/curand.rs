@@ -3,7 +3,6 @@ use std::ptr;
 
 use super::*;
 use ffi::curand_ffi::*;
-use meta::tags::CuPacked;
 
 
 
@@ -23,12 +22,12 @@ impl CurandGenerator {
     }
 
     pub fn generate_uniform_v(&mut self, output: &mut CuVectorOpMut) {
-        unsafe { curandGenerateUniform(self.handle, output.ptr_mut(), output.len()) }.assert_success();
+        unsafe { curandGenerateUniform(self.handle, output.as_mut_ptr(), output.len()) }.assert_success();
     }
     pub fn generate_uniform_range_v(&mut self, output: &mut CuVectorOpMut, min: f32, max: f32) {
         assert!(min <= max);
         unsafe {
-            curandGenerateUniform(self.handle, output.ptr_mut(), output.len()).assert_success();
+            curandGenerateUniform(self.handle, output.as_mut_ptr(), output.len()).assert_success();
             CuVector::aypb(max-min, min, output);
         }
     }
