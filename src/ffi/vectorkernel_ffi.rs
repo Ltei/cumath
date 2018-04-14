@@ -10,6 +10,7 @@ extern {
     pub fn VectorKernel_add(left_op: *const f32, right_op: *const f32, output: *mut f32, len: i32);
     pub fn VectorKernel_sub(left_op: *const f32, right_op: *const f32, output: *mut f32, len: i32);
     pub fn VectorKernel_pmult(left_op: *const f32, right_op: *const f32, output: *mut f32, len: i32);
+    pub fn VectorKernel_psquare(vector: *const f32, output: *mut f32, len: i32);
     pub fn VectorKernel_sigmoid(vector: *const f32, output: *mut f32, len: i32);
     pub fn VectorKernel_sigmoidDeriv(vector: *const f32, output: *mut f32, len: i32);
 
@@ -161,6 +162,24 @@ mod tests {
     }
     #[test]
     #[allow(non_snake_case)]
+    fn VectorKernel_psquare() {
+        let len = 10;
+        let value0 = -54.0105;
+        let mut buffer = vec![0.0; len];
+
+        let mut vector = ptr::null_mut();
+        cuda_malloc(&mut vector, len*size_of::<f32>());
+        unsafe { super::VectorKernel_init(vector as *mut f32, len as i32, value0) }
+
+        unsafe { super::VectorKernel_psquare(vector as *mut f32,vector as *mut f32, len as i32) }
+
+        cuda_memcpy(buffer.as_mut_ptr(), vector, len*size_of::<f32>(), CudaMemcpyKind::DeviceToHost);
+        cuda_free(vector);
+
+        buffer.iter().for_each(|x| { assert_equals_float(*x, value0*value0) });
+    }
+    #[test]
+    #[allow(non_snake_case)]
     fn VectorKernel_aYpb() {
         let a = 2.0;
         let b = -2.0;
@@ -183,12 +202,6 @@ mod tests {
     #[test]
     #[allow(non_snake_case)]
     fn VectorKernel_aXpb_Y() {
-        /*let vector1 = CuVector::new(10, 5.0);
-        let vector2 = CuVector::new(10, 7.0);
-        unsafe { super::VectorKernel_aXpb_Y(2.0, vector1.data, -2.0, vector2.data, 10) }
-        let mut buffer = [0.0; 10];
-        vector2.clone_to_host(&mut buffer);
-        buffer.iter().for_each(|x| { assert_equals_float(*x, 56.0) })*/
         let a = 2.0;
         let b = -2.0;
 

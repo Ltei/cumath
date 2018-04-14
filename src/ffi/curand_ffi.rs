@@ -49,9 +49,37 @@ pub enum CurandRngType {
 
 
 extern {
-    pub fn curandCreateGenerator(generator: *mut*mut StructCurandGenerator, rng_type: CurandRngType) -> CurandStatus;
+    fn curandCreateGenerator(generator: *mut*mut StructCurandGenerator, rng_type: CurandRngType) -> CurandStatus;
 
-    pub fn curandDestroyGenerator(generator: *mut StructCurandGenerator) -> CurandStatus;
+    fn curandDestroyGenerator(generator: *mut StructCurandGenerator) -> CurandStatus;
 
-    pub fn curandGenerateUniform(generator: *mut StructCurandGenerator, outputPtr: *mut f32, num: usize) -> CurandStatus;
+    fn curandGenerateUniform(generator: *mut StructCurandGenerator, outputPtr: *mut f32, num: usize) -> CurandStatus;
+}
+
+
+pub fn curand_create_generator(generator: *mut*mut StructCurandGenerator, rng_type: CurandRngType) {
+    #[cfg(not(feature = "disable_checks"))] {
+        unsafe { curandCreateGenerator(generator, rng_type) }.assert_success()
+    }
+    #[cfg(feature = "disable_checks")] {
+        unsafe { curandCreateGenerator(generator, rng_type) };
+    }
+}
+
+pub fn curand_destroy_generator(generator: *mut StructCurandGenerator) {
+    #[cfg(not(feature = "disable_checks"))] {
+        unsafe { curandDestroyGenerator(generator) }.assert_success()
+    }
+    #[cfg(feature = "disable_checks")] {
+        unsafe { curandDestroyGenerator(generator) };
+    }
+}
+
+pub fn curand_generate_uniform(generator: *mut StructCurandGenerator, output_ptr: *mut f32, num: usize) {
+    #[cfg(not(feature = "disable_checks"))] {
+        unsafe { curandGenerateUniform(generator, output_ptr, num) }.assert_success()
+    }
+    #[cfg(feature = "disable_checks")] {
+        unsafe { curandGenerateUniform(generator, output_ptr, num) };
+    }
 }

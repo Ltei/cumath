@@ -5,7 +5,7 @@ use super::*;
 
 
 
-/// A vector.
+/// A GPU-allocated vector.
 /// Holds a pointer to continuous GPU memory.
 pub struct CuVector {
     pub(crate) len: usize,
@@ -16,13 +16,12 @@ impl Drop for CuVector {
         cuda_free(self.ptr);
     }
 }
-impl CuVectorOp for CuVector {
-    fn len(&self) -> usize { self.len }
-    fn as_ptr(&self) -> *const f32 { self.ptr }
-}
-impl CuVectorOpMut for CuVector {
-    fn as_mut_ptr(&mut self) -> *mut f32 { self.ptr }
-}
+impl_CuPackedData!(CuVector);
+impl_CuPackedDataMut!(CuVector);
+impl_CuVectorOp!(CuVector);
+impl_CuVectorOpMut!(CuVector);
+
+
 impl CuVector {
 
     /// Returns a new GPU-allocated vector from a length and an initial value.
@@ -55,14 +54,18 @@ impl CuVector {
     }
     /// output[i] = left_op[i] + right_op[i]
     pub fn add(left_op: &CuVectorOp, right_op: &CuVectorOp, output: &mut CuVectorOpMut) {
-        assert_eq_usize(left_op.len(), "left_op.len()", right_op.len(), "right_op.len()");
-        assert_eq_usize(left_op.len(), "left_op.len()", output.len(), "output.len()");
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(left_op.len(), "left_op.len()", right_op.len(), "right_op.len()");
+            assert_eq_usize(left_op.len(), "left_op.len()", output.len(), "output.len()");
+        }
         unsafe { VectorKernel_add(left_op.as_ptr(), right_op.as_ptr(), output.as_mut_ptr(), left_op.len() as i32) }
     }
     /// output[i] = left_op[i] - right_op[i]
     pub fn sub(left_op: &CuVectorOp, right_op: &CuVectorOp, output: &mut CuVectorOpMut) {
-        assert_eq_usize(left_op.len(), "left_op.len()", right_op.len(), "right_op.len()");
-        assert_eq_usize(left_op.len(), "left_op.len()", output.len(), "output.len()");
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(left_op.len(), "left_op.len()", right_op.len(), "right_op.len()");
+            assert_eq_usize(left_op.len(), "left_op.len()", output.len(), "output.len()");
+        }
         unsafe { VectorKernel_sub(left_op.as_ptr(),
                                   right_op.as_ptr(),
                                   output.as_mut_ptr(),
@@ -70,8 +73,10 @@ impl CuVector {
     }
     /// output[i] = left_op[i] * right_op[i]
     pub fn pmult(left_op: &CuVectorOp, right_op: &CuVectorOp, output: &mut CuVectorOpMut) {
-        assert_eq_usize(left_op.len(), "left_op.len()", right_op.len(), "right_op.len()");
-        assert_eq_usize(left_op.len(), "left_op.len()", output.len(), "output.len()");
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(left_op.len(), "left_op.len()", right_op.len(), "right_op.len()");
+            assert_eq_usize(left_op.len(), "left_op.len()", output.len(), "output.len()");
+        }
         unsafe { VectorKernel_pmult(left_op.as_ptr(),
                                     right_op.as_ptr(),
                                     output.as_mut_ptr(),
@@ -79,12 +84,16 @@ impl CuVector {
     }
     /// output[i] = sigmoid(vector[i])
     pub fn sigmoid(vector: &CuVectorOp, output: &mut CuVectorOpMut) {
-        assert_eq_usize(vector.len(), "vector.len()", output.len(), "output.len()");
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(vector.len(), "vector.len()", output.len(), "output.len()");
+        }
         unsafe { VectorKernel_sigmoid(vector.as_ptr(), output.as_mut_ptr(), vector.len() as i32) }
     }
     /// output[i] = sigmoid_deriv(vector[i])
     pub fn sigmoid_deriv(vector: &CuVectorOp, output: &mut CuVectorOpMut) {
-        assert_eq_usize(vector.len(), "vector.len()", output.len(), "output.len()");
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(vector.len(), "vector.len()", output.len(), "output.len()");
+        }
         unsafe { VectorKernel_sigmoidDeriv(vector.as_ptr(), output.as_mut_ptr(), vector.len() as i32) }
     }
 
@@ -94,13 +103,17 @@ impl CuVector {
     }
     /// y[i] *= (a*x[i])+b
     pub fn axpb_y(a: f32, x: &CuVectorOp, b: f32, y: &mut CuVectorOpMut) {
-        assert_eq_usize(x.len(), "x.len()", y.len(), "y.len()");
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(x.len(), "x.len()", y.len(), "y.len()");
+        }
         unsafe { VectorKernel_aXpb_Y(a, x.as_ptr(), b, y.as_mut_ptr(), x.len() as i32) }
     }
     /// y[i] += x[i] * v[i]
     pub fn xvpy(x: &CuVectorOp, v: &CuVectorOp, y: &mut CuVectorOpMut) {
-        assert_eq_usize(x.len(), "x.len()", v.len(), "v.len()");
-        assert_eq_usize(x.len(), "x.len()", y.len(), "y.len()");
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(x.len(), "x.len()", v.len(), "v.len()");
+            assert_eq_usize(x.len(), "x.len()", y.len(), "y.len()");
+        }
         unsafe { VectorKernel_XVpY(x.as_ptr(), v.as_ptr(), y.as_mut_ptr(), x.len() as i32) }
     }
 }

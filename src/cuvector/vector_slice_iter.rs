@@ -4,9 +4,9 @@ use super::*;
 
 /// An iterator over a vector, returning vector slices.
 pub struct CuVectorSliceIter<'a> {
-    pub(super) parent: PhantomData<&'a CuVectorOp>,
-    pub(super) len: usize,
-    pub(super) ptr: *const f32,
+    pub(crate) parent: PhantomData<&'a CuVectorOp>,
+    pub(crate) len: usize,
+    pub(crate) ptr: *const f32,
 }
 impl<'a> CuVectorSliceIter<'a> {
 
@@ -37,13 +37,12 @@ impl<'a> CuVectorSliceIter<'a> {
 
 
 /// An iterator over a mutable vector, returning mutable vector slices.
-pub struct CuVectorSliceMutIter<'a> {
-    pub(super) parent: PhantomData<&'a CuVectorOpMut>,
-    pub(super) len: usize,
-    pub(super) ptr: *mut f32,
+pub struct CuVectorSliceIterMut<'a> {
+    pub(crate) parent: PhantomData<&'a CuVectorOpMut>,
+    pub(crate) len: usize,
+    pub(crate) ptr: *mut f32,
 }
-impl<'a> CuVectorSliceMutIter<'a> {
-
+impl<'a> CuVectorSliceIterMut<'a> {
     pub fn next<'b, 'c>(&'c mut self, len: usize) -> Option<CuVectorSliceMut<'b>> where 'a: 'b, 'b: 'c {
         match len <= self.len {
             true => {
@@ -55,7 +54,6 @@ impl<'a> CuVectorSliceMutIter<'a> {
             false => None
         }
     }
-
     pub fn skip(&mut self, len: usize) {
         if len <= self.len {
             self.ptr = unsafe { self.ptr.offset(len as isize) };

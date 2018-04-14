@@ -1,45 +1,38 @@
 
 use std::ptr;
 
-use super::*;
 use ffi::curand_ffi::*;
+use ::cudata::*;
 
 
 
 pub struct CurandGenerator {
     handle: *mut StructCurandGenerator,
 }
+
 impl Drop for CurandGenerator {
     fn drop(&mut self) {
-        unsafe { curandDestroyGenerator(self.handle) }.assert_success();
+        curand_destroy_generator(self.handle);
     }
 }
+
 impl CurandGenerator {
     pub fn new() -> CurandGenerator {
         let mut handle = ptr::null_mut();
-        unsafe { curandCreateGenerator(&mut handle, CurandRngType::PseudoDefault) }.assert_success();
+        curand_create_generator(&mut handle, CurandRngType::PseudoDefault);
         CurandGenerator { handle }
     }
 
-    pub fn generate_uniform_v(&mut self, output: &mut CuVectorOpMut) {
-        unsafe { curandGenerateUniform(self.handle, output.as_mut_ptr(), output.len()) }.assert_success();
-    }
-    pub fn generate_uniform_range_v(&mut self, output: &mut CuVectorOpMut, min: f32, max: f32) {
-        assert!(min <= max);
-        unsafe {
-            curandGenerateUniform(self.handle, output.as_mut_ptr(), output.len()).assert_success();
-            CuVector::aypb(max-min, min, output);
-        }
+    pub fn generate_uniform(&mut self, output: &mut CuPackedDataMut) {
+        curand_generate_uniform(self.handle, output.as_mut_ptr(), output.len());
     }
 
-    pub fn generate_uniform_m<CuMatrixOpMutPackedT: CuMatrixOpMut + CuPacked>(&mut self, output: &mut CuMatrixOpMutPackedT) {
-        unsafe { curandGenerateUniform(self.handle, output.ptr_mut(), output.len()) }.assert_success();
-    }
-    pub fn generate_uniform_range_m<CuMatrixOpMutPackedT: CuMatrixOpMut + CuPacked>(&mut self, output: &mut CuMatrixOpMutPackedT, min: f32, max: f32) {
+    pub fn generate_uniform_range(&mut self, output: &mut CuPackedDataMut, min: f32, max: f32) {
+        use ffi::vectorkernel_ffi::VectorKernel_aYpb;
         assert!(min <= max);
         unsafe {
-            curandGenerateUniform(self.handle, output.ptr_mut(), output.len()).assert_success();
-            CuMatrix::aypb(max-min, min, output);
+            curand_generate_uniform(self.handle, output.as_mut_ptr(), output.len());
+            VectorKernel_aYpb(max-min, min, output.as_mut_ptr(), output.len() as i32);
         }
     }
 }
@@ -47,14 +40,15 @@ impl CurandGenerator {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::CurandGenerator;
+    use cuvector::{CuVector, CuVectorOp};
 
     #[test]
-    fn curand_generate_uniform_v() {
+    fn curand_generate_uniform() {
         let mut generator = CurandGenerator::new();
 
         let mut vector = CuVector::new(10, 0.0);
-        generator.generate_uniform_v(&mut vector);
+        generator.generate_uniform(&mut vector);
 
         let mut buffer = vec![0.0; 10];
         vector.clone_to_host(&mut buffer);
@@ -65,14 +59,14 @@ mod tests {
     }
 
     #[test]
-    fn curand_generate_uniform_range_v() {
+    fn curand_generate_uniform_range() {
         let min = -5.0;
         let max = 15.0;
 
         let mut generator = CurandGenerator::new();
 
         let mut vector = CuVector::new(10, 0.0);
-        generator.generate_uniform_range_v(&mut vector, min, max);
+        generator.generate_uniform_range(&mut vector, min, max);
 
         let mut buffer = vec![0.0; 10];
         vector.clone_to_host(&mut buffer);

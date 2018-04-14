@@ -88,6 +88,7 @@ pub enum CudaError {
     StartupFailure               =   0x7f,
     ApiFailureBase               =  10000,
 }
+#[cfg(not(feature = "disable_checks"))]
 impl CudaError {
     pub fn assert_success(&self) {
         assert_eq!(self, &CudaError::Success);
@@ -129,25 +130,50 @@ extern {
 
 #[inline]
 pub fn cuda_malloc(ptr: *mut*mut f32, size: usize) {
-    unsafe { cudaMalloc(ptr as *mut*mut c_void, size) }.assert_success()
+    #[cfg(not(feature = "disable_checks"))] {
+        unsafe { cudaMalloc(ptr as *mut *mut c_void, size) }.assert_success()
+    }
+    #[cfg(feature = "disable_checks")] {
+        unsafe { cudaMalloc(ptr as *mut *mut c_void, size) };
+    }
 }
 
 #[inline]
 pub fn cuda_free(dev_ptr: *mut f32) {
-    unsafe { cudaFree(dev_ptr as *mut c_void) }.assert_success()
+    #[cfg(not(feature = "disable_checks"))] {
+        unsafe { cudaFree(dev_ptr as *mut c_void) }.assert_success()
+    }
+    #[cfg(feature = "disable_checks")] {
+        unsafe { cudaFree(dev_ptr as *mut c_void) };
+    }
 }
 
 #[inline]
 pub fn cuda_memcpy(dst: *mut f32, src: *const f32, count: usize, kind: CudaMemcpyKind) {
-    unsafe { cudaMemcpy(dst as *mut c_void, src as *mut c_void, count, kind) }.assert_success()
+    #[cfg(not(feature = "disable_checks"))] {
+        unsafe { cudaMemcpy(dst as * mut c_void, src as * mut c_void, count, kind) }.assert_success()
+    }
+    #[cfg(feature = "disable_checks")] {
+        unsafe { cudaMemcpy(dst as * mut c_void, src as * mut c_void, count, kind) };
+    }
 }
 
 #[inline]
 pub fn cuda_memcpy2d(dst: *mut f32, dpitch: usize, src: *const f32, spitch: usize, width: usize, height: usize, kind: CudaMemcpyKind) {
-    unsafe { cudaMemcpy2D(dst as *mut c_void, dpitch, src as *mut c_void, spitch, width, height, kind) }.assert_success()
+    #[cfg(not(feature = "disable_checks"))] {
+        unsafe { cudaMemcpy2D(dst as *mut c_void, dpitch, src as *mut c_void, spitch, width, height, kind) }.assert_success()
+    }
+    #[cfg(feature = "disable_checks")] {
+        unsafe { cudaMemcpy2D(dst as *mut c_void, dpitch, src as *mut c_void, spitch, width, height, kind) };
+    }
 }
 
 #[inline]
 pub fn cuda_synchronize() {
-    unsafe { cudaDeviceSynchronize() }.assert_success()
+    #[cfg(not(feature = "disable_checks"))] {
+        unsafe { cudaDeviceSynchronize() }.assert_success()
+    }
+    #[cfg(feature = "disable_checks")] {
+        unsafe { cudaDeviceSynchronize() };
+    }
 }

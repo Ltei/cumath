@@ -4,6 +4,9 @@ use std::ptr;
 
 use super::*;
 use ffi::cublas_ffi::*;
+use ::cudata::{CuPackedData, CuPackedDataMut};
+
+#[cfg(not(feature = "disable_checks"))]
 use meta::assert::*;
 
 
@@ -13,107 +16,109 @@ pub struct Cublas {
 }
 impl Drop for Cublas {
     fn drop(&mut self) {
-        unsafe { cublasDestroy_v2(self.handle) }.assert_success();
+        cublas_destroy(self.handle)
     }
 }
 impl Cublas {
     pub fn new() -> Cublas {
         let mut handle = ptr::null_mut();
-        unsafe { cublasCreate_v2(&mut handle) }.assert_success();
+        cublas_create(&mut handle);
         Cublas { handle }
     }
 
     pub fn mult_m_m(&self, left_op: &CuMatrixOp, right_op: &CuMatrixOp, output: &mut CuMatrixOpMut) {
-        assert_eq_usize(left_op.cols(), "left_op.cols()", right_op.rows(), "right_op.rows()");
-        assert_eq_usize(left_op.rows(), "left_op.rows()", output.rows(), "output.rows()");
-        assert_eq_usize(right_op.cols(), "right_op.cols()", output.cols(), "output.cols()");
-        unsafe {
-            cublasSgemm_v2(self.handle,
-                           CublasOperation::None, CublasOperation::None,
-                           left_op.rows() as i32, right_op.cols() as i32, left_op.cols() as i32, &1.0,
-                           left_op.ptr(), left_op.rows() as i32,
-                           right_op.ptr(), right_op.rows() as i32,
-                           &0.0, output.ptr_mut(), output.rows() as i32)
-        }.assert_success();
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(left_op.cols(), "left_op.cols()", right_op.rows(), "right_op.rows()");
+            assert_eq_usize(left_op.rows(), "left_op.rows()", output.rows(), "output.rows()");
+            assert_eq_usize(right_op.cols(), "right_op.cols()", output.cols(), "output.cols()");
+        }
+        cublas_sgemm(self.handle,
+                     CublasOperation::None, CublasOperation::None,
+                     left_op.rows() as i32, right_op.cols() as i32, left_op.cols() as i32, &1.0,
+                     left_op.as_ptr(), left_op.rows() as i32,
+                     right_op.as_ptr(), right_op.rows() as i32,
+                     &0.0, output.as_mut_ptr(), output.rows() as i32)
     }
     pub fn mult_row_m(&self, left_op: &CuVectorOp, right_op: &CuMatrixOp, output: &mut CuVectorOpMut) {
-        assert_eq_usize(left_op.len(), "left_op.len()", right_op.rows(), "right_op.rows()");
-        assert_eq_usize(right_op.cols(), "right_op.cols()", output.len(), "output.len()");
-        unsafe {
-            cublasSgemv_v2(self.handle,
-                           CublasOperation::Transpose,
-                           right_op.rows() as i32, right_op.cols() as i32, &1.0,
-                           right_op.ptr(), right_op.rows() as i32,
-                           left_op.as_ptr(), 1,
-                           &0.0, output.as_mut_ptr(), 1)
-        }.assert_success();
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(left_op.len(), "left_op.len()", right_op.rows(), "right_op.rows()");
+            assert_eq_usize(right_op.cols(), "right_op.cols()", output.len(), "output.len()");
+        }
+        cublas_sgemv(self.handle,
+                     CublasOperation::Transpose,
+                     right_op.rows() as i32, right_op.cols() as i32, &1.0,
+                     right_op.as_ptr(), right_op.rows() as i32,
+                     left_op.as_ptr(), 1,
+                     &0.0, output.as_mut_ptr(), 1)
     }
     pub fn mult_m_col(&self, left_op: &CuMatrixOp, right_op: &CuVectorOp, output: &mut CuVectorOpMut) {
-        assert_eq_usize(left_op.cols(), "left_op.cols()", right_op.len(), "right_op.len()");
-        assert_eq_usize(left_op.rows(), "left_op.rows()", output.len(), "output.len()");
-        unsafe {
-            cublasSgemv_v2(self.handle,
-                           CublasOperation::None,
-                           left_op.rows() as i32, left_op.cols() as i32, &1.0,
-                           left_op.ptr(), left_op.rows() as i32,
-                           right_op.as_ptr(), 1,
-                           &0.0, output.as_mut_ptr(), 1)
-        }.assert_success();
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(left_op.cols(), "left_op.cols()", right_op.len(), "right_op.len()");
+            assert_eq_usize(left_op.rows(), "left_op.rows()", output.len(), "output.len()");
+        }
+        cublas_sgemv(self.handle,
+                     CublasOperation::None,
+                     left_op.rows() as i32, left_op.cols() as i32, &1.0,
+                     left_op.as_ptr(), left_op.rows() as i32,
+                     right_op.as_ptr(), 1,
+                     &0.0, output.as_mut_ptr(), 1)
     }
     pub fn mult_col_row(&self, left_op: &CuVectorOp, right_op: &CuVectorOp, output: &mut CuMatrixOpMut) {
-        assert_eq_usize(left_op.len(), "left_op.len()", output.rows(), "output.rows()");
-        assert_eq_usize(right_op.len(), "right_op.len()", output.cols(), "output.cols()");
-        unsafe {
-            cublasSgemm_v2(self.handle,
-                           CublasOperation::None, CublasOperation::None,
-                           left_op.len() as i32, right_op.len() as i32, 1, &1.0,
-                           left_op.as_ptr(), left_op.len() as i32,
-                           right_op.as_ptr(), 1,
-                           &0.0, output.ptr_mut(), output.rows() as i32)
-        }.assert_success();
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(left_op.len(), "left_op.len()", output.rows(), "output.rows()");
+            assert_eq_usize(right_op.len(), "right_op.len()", output.cols(), "output.cols()");
+        }
+        cublas_sgemm(self.handle,
+                     CublasOperation::None, CublasOperation::None,
+                     left_op.len() as i32, right_op.len() as i32, 1, &1.0,
+                     left_op.as_ptr(), left_op.len() as i32,
+                     right_op.as_ptr(), 1,
+                     &0.0, output.as_mut_ptr(), output.rows() as i32)
     }
 
     /** output = out_scl * output + in_scl * left_op * right_op */
     pub fn mult_col_row_(&self, left_op: &CuVectorOp, right_op: &CuVectorOp, output: &mut CuMatrixOpMut, in_scl: f32, out_scl: f32) {
-        assert_eq_usize(left_op.len(), "left_op.len()", output.rows(), "output.rows()");
-        assert_eq_usize(right_op.len(), "right_op.len()", output.cols(), "output.cols()");
-        unsafe {
-            cublasSgemm_v2(self.handle,
-                           CublasOperation::None, CublasOperation::None,
-                           left_op.len() as i32, right_op.len() as i32, 1, &in_scl,
-                           left_op.as_ptr(), left_op.len() as i32,
-                           right_op.as_ptr(), 1,
-                           &out_scl, output.ptr_mut(), output.rows() as i32)
-        }.assert_success();
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(left_op.len(), "left_op.len()", output.rows(), "output.rows()");
+            assert_eq_usize(right_op.len(), "right_op.len()", output.cols(), "output.cols()");
+        }
+        cublas_sgemm(self.handle,
+                     CublasOperation::None, CublasOperation::None,
+                     left_op.len() as i32, right_op.len() as i32, 1, &in_scl,
+                     left_op.as_ptr(), left_op.len() as i32,
+                     right_op.as_ptr(), 1,
+                     &out_scl, output.as_mut_ptr(), output.rows() as i32)
     }
 
-    /*pub fn asum_m(&self, matrix: &CuMatrix) -> f32 {
+    pub fn asum(&self, vector: &CuPackedData) -> f32 {
         let mut output = 0.0;
-        unsafe { cublasSasum_v2(self.handle, matrix.len as i32, matrix.data, 1, &mut output) }.assert_success();
+        cublas_sasum(self.handle, vector.len() as i32, vector.as_ptr(), 1, &mut output);
         output
+    }
+
+    /*pub fn axpy_m(&self, alpha: f32, x: &CuMatrixOp, y: &mut CuMatrixOpMut) {
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(x.rows(), "x.rows()", y.rows(), "y.rows()");
+            assert_eq_usize(x.cols(), "x.cols()", y.cols(), "y.cols()");
+        }
+        cublas_saxpy(self.handle, x.len() as i32, &alpha, x.as_ptr(), 1, y.as_mut_ptr(), 1);
     }*/
-    pub fn asum_v(&self, vector: &CuVectorOp) -> f32 {
-        let mut output = 0.0;
-        unsafe { cublasSasum_v2(self.handle, vector.len() as i32, vector.as_ptr(), 1, &mut output) }.assert_success();
-        output
+    pub fn axpy(&self, alpha: f32, x: &CuPackedData, y: &mut CuPackedDataMut) {
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(x.len(), "x.len()", y.len(), "y.len()");
+        }
+        cublas_saxpy(self.handle, x.len() as i32, &alpha, x.as_ptr(), 1, y.as_mut_ptr(), 1)
     }
 
-    pub fn axpy_m(&self, alpha: f32, x: &CuMatrixOp, y: &mut CuMatrixOpMut) {
-        unsafe {
-            cublasSaxpy_v2(self.handle, x.len() as i32, &alpha, x.ptr(), 1, y.ptr_mut(), 1)
-        }.assert_success()
-    }
-    pub fn axpy_v(&self, alpha: f32, x: &CuVectorOp, y: &mut CuVectorOpMut) {
-        unsafe {
-            cublasSaxpy_v2(self.handle, x.len() as i32, &alpha, x.as_ptr(), 1, y.as_mut_ptr(), 1)
-        }.assert_success()
-    }
+    pub fn clone_weighted_from_device(&self, data: &[&CuPackedData], weights: &[f32], output: &mut CuPackedDataMut) {
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(data.len(), "data.len()", weights.len(), "weights.len()");
+        }
+        use ffi::vectorkernel_ffi;
+        unsafe { vectorkernel_ffi::VectorKernel_init(output.as_mut_ptr(), output.len() as i32, 0.0) };
 
-    pub fn clone_weighted_from_device_m(&self, data: &[&CuMatrixOp], weights: &[f32], output: &mut CuMatrixOpMut) {
-        assert_eq_usize(data.len(), "data.len()", weights.len(), "weights.len()");
-        output.init(0.0);
         for i in 0..data.len() {
-            self.axpy_m(weights[i], data[i], output);
+            self.axpy(weights[i], data[i], output);
         }
     }
 }
@@ -136,7 +141,7 @@ mod tests {
 
         let cublas = Cublas::new();
         let vector = CuVector::from_data(input_data.as_slice());
-        let asum = cublas.asum_v(&vector);
+        let asum = cublas.asum(&vector);
 
         assert_eq!(24.0, asum);
     }

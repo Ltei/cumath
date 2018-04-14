@@ -1,13 +1,12 @@
 
 use std::{ptr, mem::size_of};
-
 use super::*;
-use ffi::vectorkernel_ffi::*;
+use ffi::{vectorkernel_ffi::*};
 
 
 
-// CuMatrix
-
+/// A GPU-allocated matrix
+/// Holds a pointer to continuous GPU memory.
 pub struct CuMatrix {
     pub(crate) rows: usize,
     pub(crate) cols: usize,
@@ -19,36 +18,14 @@ impl Drop for CuMatrix {
         cuda_free(self.ptr);
     }
 }
-impl CuMatrixOp for CuMatrix {
-    fn rows(&self) -> usize { self.rows }
-    fn cols(&self) -> usize { self.cols }
-    fn len(&self) -> usize { self.rows*self.cols }
-    fn leading_dimension(&self) -> usize { self.rows }
-    fn ptr(&self) -> *const f32 { self.ptr }
+impl_CuPackedData!(CuMatrix);
+impl_CuPackedDataMut!(CuMatrix);
+impl_CuMatrixOp_packed!(CuMatrix);
+impl_CuMatrixOpMut_packed!(CuMatrix);
 
-    fn clone_to_host(&self, output: &mut [f32]) {
-        cuda_memcpy(output.as_mut_ptr(), self.ptr, self.len * size_of::<f32>(), CudaMemcpyKind::DeviceToHost);
-    }
-}
-impl CuMatrixOpMut for CuMatrix {
-    fn ptr_mut(&mut self) -> *mut f32 { self.ptr }
-
-    fn clone_from_host(&mut self, data: &[f32]) {
-        cuda_memcpy(self.ptr, data.as_ptr(), self.len() * size_of::<f32>(), CudaMemcpyKind::HostToDevice);
-    }
-
-    fn init(&mut self, value: f32) {
-        unsafe { VectorKernel_init(self.ptr_mut(), self.len as i32, value) }
-    }
-    fn add_value_self(&mut self, value: f32) {
-        unsafe { VectorKernel_addValue(self.ptr, self.ptr, self.len as i32, value) }
-    }
-    fn scale_self(&mut self, value: f32) {
-        unsafe { VectorKernel_scl(self.ptr, self.ptr, self.len as i32, value) }
-    }
-}
-impl CuPacked for CuMatrix {}
 impl CuMatrix {
+
+    /// Returns a new GPU-allocated matrix from a length and an initial value.
     pub fn new(rows: usize, cols: usize, init_value: f32) -> CuMatrix {
         let len = rows*cols;
         let mut data = ptr::null_mut();
@@ -59,8 +36,12 @@ impl CuMatrix {
             ptr: data as *mut f32,
         }
     }
+
+    /// Returns a new GPU-allocated matrix from CPU data.
     pub fn from_data(rows: usize, cols: usize, data: &[f32]) -> CuMatrix {
-        assert_eq_usize(rows*cols, "rows*cols", data.len(), "data.len()");
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(rows * cols, "rows*cols", data.len(), "data.len()");
+        }
         let mut output = {
             let len = rows*cols;
             let mut data = ptr::null_mut();
@@ -74,7 +55,10 @@ impl CuMatrix {
         output
     }
 
-    pub fn slice_col<'a>(&'a self, col_offset: usize, nb_cols: usize) -> CuMatrixSlice<'a, Self> {
+    pub fn slice_col<'a>(&'a self, col_offset: usize, nb_cols: usize) -> CuMatrixSlice<'a> {
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_infeq_usize(col_offset + nb_cols, "col_offset+nb_cols", self.cols(), "self.cols()");
+        }
         CuMatrixSlice {
             parent: PhantomData,
             rows: self.leading_dimension(),
@@ -83,7 +67,10 @@ impl CuMatrix {
             ptr: unsafe { self.ptr.offset((col_offset*self.leading_dimension()) as isize) },
         }
     }
-    pub fn slice_col_mut<'a>(&'a mut self, col_offset: usize, nb_cols: usize) -> CuMatrixSliceMut<'a, Self> {
+    pub fn slice_col_mut<'a>(&'a mut self, col_offset: usize, nb_cols: usize) -> CuMatrixSliceMut<'a> {
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_infeq_usize(col_offset + nb_cols, "col_offset+nb_cols", self.cols(), "self.cols()");
+        }
         CuMatrixSliceMut {
             parent: PhantomData,
             rows: self.leading_dimension(),
@@ -93,9 +80,11 @@ impl CuMatrix {
         }
     }
 
+    /// y[i][j] = a*y[i][j]+b
     pub fn aypb(a: f32, b: f32, y: &mut CuMatrixOpMut) {
-        unsafe { MatrixKernel_aYpb(a, b, y.ptr_mut(), y.leading_dimension() as i32, y.rows() as i32, y.cols() as i32) }
+        unsafe { MatrixKernel_aYpb(a, b, y.as_mut_ptr(), y.leading_dimension() as i32, y.rows() as i32, y.cols() as i32) }
     }
+
 }
 
 

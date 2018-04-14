@@ -35,17 +35,17 @@ pub enum CublasOperation {
 
 
 extern {
-    pub fn cublasCreate_v2(handle: *mut*mut StructCublasContext) -> CublasStatus;
+    fn cublasCreate_v2(handle: *mut*mut StructCublasContext) -> CublasStatus;
 
-    pub fn cublasDestroy_v2(handle: *mut StructCublasContext) -> CublasStatus;
+    fn cublasDestroy_v2(handle: *mut StructCublasContext) -> CublasStatus;
 
-    pub fn cublasSasum_v2(handle: *mut StructCublasContext,
+    fn cublasSasum_v2(handle: *mut StructCublasContext,
                           n: i32,
                           x: *const f32,
                           incx: i32,
                           result: *mut f32) -> CublasStatus;
 
-    pub fn cublasSaxpy_v2(handle: *mut StructCublasContext,
+    fn cublasSaxpy_v2(handle: *mut StructCublasContext,
                           n: i32,
                           alpha: *const f32,
                           x: *const f32,
@@ -53,7 +53,7 @@ extern {
                           y: *mut f32,
                           incy: i32) -> CublasStatus;
 
-    pub fn cublasSgemv_v2(handle: *mut StructCublasContext,
+    fn cublasSgemv_v2(handle: *mut StructCublasContext,
                           trans: CublasOperation,
                           m: i32, n: i32,
                           alpha: *const f32,
@@ -62,7 +62,7 @@ extern {
                           beta: *const f32,
                           y: *mut f32, incy: i32) -> CublasStatus;
 
-    pub fn cublasSgemm_v2(handle: *mut StructCublasContext,
+    fn cublasSgemm_v2(handle: *mut StructCublasContext,
                           transa: CublasOperation, transb: CublasOperation,
                           m: i32, n: i32, k: i32,
                           alpha: *const f32,
@@ -70,4 +70,85 @@ extern {
                           B: *const f32, ldb: i32,
                           beta: *const f32,
                           C: *mut f32, ldc: i32) -> CublasStatus;
+}
+
+
+#[inline]
+pub fn cublas_create(handle: *mut*mut StructCublasContext) {
+    #[cfg(not(feature = "disable_checks"))] {
+        unsafe { cublasCreate_v2(handle) }.assert_success()
+    }
+    #[cfg(feature = "disable_checks")] {
+        unsafe { cublasCreate_v2(handle) };
+    }
+}
+
+#[inline]
+pub fn cublas_destroy(handle: *mut StructCublasContext) {
+    #[cfg(not(feature = "disable_checks"))] {
+        unsafe { cublasDestroy_v2(handle) }.assert_success()
+    }
+    #[cfg(feature = "disable_checks")] {
+        unsafe { cublasDestroy_v2(handle) };
+    }
+}
+
+#[inline]
+pub fn cublas_sasum(handle: *mut StructCublasContext,
+                    n: i32,
+                    x: *const f32, incx: i32,
+                    result: *mut f32) {
+    #[cfg(not(feature = "disable_checks"))] {
+        unsafe { cublasSasum_v2(handle, n, x, incx, result) }.assert_success()
+    }
+    #[cfg(feature = "disable_checks")] {
+        unsafe { cublasSasum_v2(handle, n, x, incx, result) };
+    }
+}
+
+#[inline]
+pub fn cublas_saxpy(handle: *mut StructCublasContext,
+                    n: i32, alpha: *const f32,
+                    x: *const f32, incx: i32,
+                    y: *mut f32, incy: i32) {
+    #[cfg(not(feature = "disable_checks"))] {
+        unsafe { cublasSaxpy_v2(handle, n, alpha, x, incx, y, incy) }.assert_success()
+    }
+    #[cfg(feature = "disable_checks")] {
+        unsafe { cublasSaxpy_v2(handle, n, alpha, x, incx, y, incy) };
+    }
+}
+
+#[inline]
+pub fn cublas_sgemv(handle: *mut StructCublasContext,
+                    trans: CublasOperation,
+                    m: i32, n: i32,
+                    alpha: *const f32,
+                    a: *const f32, lda: i32,
+                    x: *const f32, incx: i32,
+                    beta: *const f32,
+                    y: *mut f32, incy: i32) {
+    #[cfg(not(feature = "disable_checks"))] {
+        unsafe { cublasSgemv_v2(handle, trans, m, n, alpha, a, lda, x, incx, beta, y, incy) }.assert_success()
+    }
+    #[cfg(feature = "disable_checks")] {
+        unsafe { cublasSgemv_v2(handle, trans, m, n, alpha, a, lda, x, incx, beta, y, incy) };
+    }
+}
+
+#[inline]
+pub fn cublas_sgemm(handle: *mut StructCublasContext,
+                    transa: CublasOperation, transb: CublasOperation,
+                    m: i32, n: i32, k: i32,
+                    alpha: *const f32,
+                    a: *const f32, lda: i32,
+                    b: *const f32, ldb: i32,
+                    beta: *const f32,
+                    c: *mut f32, ldc: i32) {
+    #[cfg(not(feature = "disable_checks"))] {
+        unsafe { cublasSgemm_v2(handle, transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc) }.assert_success()
+    }
+    #[cfg(feature = "disable_checks")] {
+        unsafe { cublasSgemm_v2(handle, transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc) };
+    }
 }

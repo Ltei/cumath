@@ -25,6 +25,10 @@ __global__ void kernel_pmult(float* left_op, float* right_op, float* output, int
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid < len) { output[tid] = left_op[tid] * right_op[tid]; }
 }
+__global__ void kernel_psquare(float* vector, float* output, int len) {
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid < len) { output[tid] = vector[tid] * vector[tid]; }
+}
 __global__ void kernel_sigmoid(float* vector, float* output, int len) {
     float tmp;
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -117,6 +121,15 @@ extern "C" {
         gridDim.x = (len + blockDim.x - 1) / blockDim.x;
 
         kernel_pmult <<<gridDim, blockDim>>> (left_op, right_op, output, len);
+    }
+    void VectorKernel_psquare(float* vector, float* output, int len) {
+        dim3 gridDim;
+        dim3 blockDim;
+
+        blockDim.x = 1024;
+        gridDim.x = (len + blockDim.x - 1) / blockDim.x;
+
+        kernel_psquare <<<gridDim, blockDim>>> (vector, output, len);
     }
     void VectorKernel_sigmoid(float* vector, float* output, int len) {
        dim3 gridDim;

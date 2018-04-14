@@ -16,7 +16,11 @@ exclude = [
     "target/*",
 ]
 
-[dependencies]
+
+[features]
+default = []
+disable_checks = []
+
 
 [build-dependencies]
 cc = "1.0"

@@ -3,44 +3,29 @@ use super::*;
 
 
 
-// CuSubMatrix
-
+/// A vector slice.
+/// Holds a pointer to possibly non-continuous GPU memory.
 pub struct CuSubMatrix<'a> {
-    pub(super) parent: PhantomData<&'a CuMatrixOp>,
-    pub(super) rows: usize,
-    pub(super) cols: usize,
-    pub(super) leading_dimension: usize,
-    pub(super) ptr: *const f32,
+    pub(crate) parent: PhantomData<&'a CuMatrixOp>,
+    pub(crate) rows: usize,
+    pub(crate) cols: usize,
+    pub(crate) leading_dimension: usize,
+    pub(crate) ptr: *const f32,
 }
-impl<'a> CuMatrixOp for CuSubMatrix<'a>  {
-    fn rows(&self) -> usize { self.rows }
-    fn cols(&self) -> usize { self.cols }
-    fn len(&self) -> usize { self.rows*self.cols }
-    fn leading_dimension(&self) -> usize { self.leading_dimension }
-    fn ptr(&self) -> *const f32 { self.ptr }
-}
+impl_CuMatrixOp_fragmented!(CuSubMatrix<'a>, 'a);
 
 
-// CuSubMatrixMut
-
+/// A mutable vector slice.
+/// Holds a pointer to possibly non-continuous GPU memory.
 pub struct CuSubMatrixMut<'a> {
-    pub(super) parent: PhantomData<&'a CuMatrixOpMut>,
-    pub(super) rows: usize,
-    pub(super) cols: usize,
-    pub(super) leading_dimension: usize,
-    pub(super) ptr: *mut f32,
+    pub(crate) parent: PhantomData<&'a CuMatrixOpMut>,
+    pub(crate) rows: usize,
+    pub(crate) cols: usize,
+    pub(crate) leading_dimension: usize,
+    pub(crate) ptr: *mut f32,
 }
-impl<'a> CuMatrixOp for CuSubMatrixMut<'a>  {
-    fn rows(&self) -> usize { self.rows }
-    fn cols(&self) -> usize { self.cols }
-    fn len(&self) -> usize { self.rows*self.cols }
-    fn leading_dimension(&self) -> usize { self.leading_dimension }
-    fn ptr(&self) -> *const f32 { self.ptr }
-}
-impl<'a> CuMatrixOpMut for CuSubMatrixMut<'a>  {
-    fn ptr_mut(&mut self) -> *mut f32 { self.ptr }
-}
-
+impl_CuMatrixOp_fragmented!(CuSubMatrixMut<'a>, 'a);
+impl_CuMatrixOpMut_fragmented!(CuSubMatrixMut<'a>, 'a);
 
 
 
