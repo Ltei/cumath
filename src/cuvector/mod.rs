@@ -20,20 +20,6 @@ mod vector_slice_iter;
 pub use self::vector_slice_iter::*;
 
 
-
-/*#[test]
-fn test() {
-    #[cfg(features = "disable_checks")] {
-        println!("Checks disabled");
-    }
-    #[cfg(not(features = "disable_checks"))] {
-        println!("Checks enabled");
-    }
-    let vector = CuVector::new(10, 0.0);
-    let slice = vector.slice(20, 30);
-}*/
-
-
 /// Immutable vector operator trait.
 pub trait CuVectorOp {
 
@@ -47,13 +33,25 @@ pub trait CuVectorOp {
     #[inline]
     fn as_ptr(&self) -> *const f32;
 
+    /*/// Returns a new GPU-allocated copy of 'self'.
+    fn clone(&self) -> CuVector {
+        let mut output = {
+            let len = self.len();
+            let mut data = ptr::null_mut();
+            cuda_malloc(&mut data, len*size_of::<f32>());
+            CuVector { len, ptr: (data as *mut f32) }
+        };
+        output.clone_from_device(self);
+        output
+    }*/
+
     /// Creates a vector slice starting from self.ptr()+offset, to self.ptr()+offset+len.
     fn slice<'a>(&'a self, offset: usize, len: usize) -> CuVectorSlice<'a> {
         #[cfg(not(feature = "disable_checks"))] {
             assert_infeq_usize(offset+len, "offset+len", self.len(), "self.len");
         }
         CuVectorSlice {
-            parent: PhantomData,
+            _parent: PhantomData,
             len,
             ptr: unsafe { self.as_ptr().offset(offset as isize) },
         }
@@ -91,11 +89,10 @@ pub trait CuVectorOp {
         if self.len() != data.len() { panic!(); }
         let mut buffer = vec![0.0; self.len()];
         self.clone_to_host(&mut buffer);
-        let mut iter = buffer.iter();
-        data.iter().for_each(|x| {
-            let delta = x-iter.next().unwrap();
-            if delta > -0.00001 && delta < 0.00001 { panic!(); }
-        });
+        for i in 0..data.len() {
+            let delta = data[i]-buffer[i];
+            if delta < -0.00001 || delta > 0.00001 { panic!("At index {} : {:.8} != {:.8}", i, data[i], buffer[i]); }
+        }
     }
 
 }
@@ -115,7 +112,7 @@ pub trait CuVectorOpMut: CuVectorOp {
             assert_infeq_usize(offset + len, "offset+len", self.len(), "self.len");
         }
         CuVectorSliceMut {
-            parent: PhantomData,
+            _parent: PhantomData,
             len,
             ptr: unsafe { self.as_mut_ptr().offset(offset as isize) },
         }
@@ -131,11 +128,11 @@ pub trait CuVectorOpMut: CuVectorOp {
         }
 
         (CuVectorSliceMut {
-            parent: PhantomData, len: len0,
+            _parent: PhantomData, len: len0,
             ptr: unsafe { self.as_mut_ptr().offset(offset0 as isize) },
         },
         CuVectorSliceMut {
-            parent: PhantomData, len: len1,
+            _parent: PhantomData, len: len1,
             ptr: unsafe { self.as_mut_ptr().offset(offset1 as isize) },
         })
     }
@@ -195,6 +192,14 @@ pub trait CuVectorOpMut: CuVectorOp {
         unsafe { VectorKernel_add(self.as_ptr(), right_op.as_ptr(), self.as_mut_ptr(), self.len() as i32) }
     }
 
+    /// Substract an other vector to this one.
+    fn sub_self(&mut self, right_op: &CuVectorOp) {
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(self.len(), "self.len()", right_op.len(), "right_op.len()");
+        }
+        unsafe { VectorKernel_sub(self.as_ptr(), right_op.as_ptr(), self.as_mut_ptr(), self.len() as i32) }
+    }
+
     /// Multiply each element of the vector by the corresponding element in the parameter vector.
     fn pmult_self(&mut self, right_op: &CuVectorOp) {
         #[cfg(not(feature = "disable_checks"))] {
@@ -249,6 +254,13 @@ mod tests {
     fn codec() {
         let data = [1.2, -2.2656146, 7.12, 2.0, 4.5];
         CuVector::decode(&CuVector::from_data(&data).encode()).dev_assert_equals(&data);
+    }
+
+    #[test]
+    fn test() {
+        let mut vector = CuVector::new(2, 0.0);
+        vector.add_value_self(-1.2);
+        vector.dev_print("Hello");
     }
 
 }

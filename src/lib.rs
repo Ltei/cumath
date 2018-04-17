@@ -56,7 +56,7 @@ pub mod cudata {
                     let ptr = self.ptr;
                     self.ptr = unsafe { self.ptr.offset(len as isize) };
                     self.len -= len;
-                    Some(CuVectorSlice { parent: PhantomData, len, ptr })
+                    Some(CuVectorSlice { _parent: PhantomData, len, ptr })
                 }
                 false => None
             }
@@ -105,7 +105,7 @@ pub mod cudata {
                     let ptr = self.ptr;
                     self.ptr = unsafe { self.ptr.offset(len as isize) };
                     self.len -= len;
-                    Some(CuVectorSliceMut { parent: PhantomData, len, ptr })
+                    Some(CuVectorSliceMut { _parent: PhantomData, len, ptr })
                 }
                 false => None
             }
@@ -183,7 +183,7 @@ pub mod cudata {
     pub fn vector_slice<'a>(data: &'a CuPackedData, offset: usize, len: usize) -> CuVectorSlice<'a> {
         assert!(offset + len < data.len());
         CuVectorSlice {
-            parent: PhantomData,
+            _parent: PhantomData,
             len,
             ptr: unsafe { data.as_ptr().offset(offset as isize) },
         }
@@ -193,7 +193,7 @@ pub mod cudata {
     pub fn vector_slice_mut<'a>(data: &'a mut CuPackedDataMut, offset: usize, len: usize) -> CuVectorSliceMut<'a> {
         assert!(offset + len < data.len());
         CuVectorSliceMut {
-            parent: PhantomData,
+            _parent: PhantomData,
             len,
             ptr: unsafe { data.as_mut_ptr().offset(offset as isize) },
         }

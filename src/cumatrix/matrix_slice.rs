@@ -20,6 +20,7 @@ impl<'a> CuMatrixSlice<'a> {
         #[cfg(not(feature = "disable_checks"))] {
             assert_infeq_usize(col_offset + nb_cols, "col_offset+nb_cols", self.cols(), "self.cols()");
         }
+
         CuMatrixSlice {
             parent: PhantomData,
             rows: self.leading_dimension(),

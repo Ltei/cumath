@@ -98,11 +98,10 @@ pub trait CuMatrixOp {
         if self.len() != data.len() { panic!(); }
         let mut buffer = vec![0.0; self.len()];
         self.clone_to_host(&mut buffer);
-        let mut iter = buffer.iter();
-        data.iter().for_each(|x| {
-            let delta = x-iter.next().unwrap();
-            if delta > -0.00001 && delta < 0.00001 { panic!(); }
-        });
+        for i in 0..data.len() {
+            let delta = data[i]-buffer[i];
+            if delta < -0.00001 || delta > 0.00001 { panic!("At index {} : {:.8} != {:.8}", i, data[i], buffer[i]); }
+        }
     }
 
 }

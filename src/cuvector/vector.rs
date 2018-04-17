@@ -32,7 +32,7 @@ impl CuVector {
         CuVector { len, ptr: (data as *mut f32) }
     }
 
-    /// Returns a new GPU-allocated vector from CPU data.
+    /// Returns a new GPU-allocated copy of 'data'.
     pub fn from_data(data: &[f32]) -> CuVector {
         let mut output = {
             let len = data.len();

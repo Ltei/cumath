@@ -16,7 +16,7 @@ impl<'a> CuVectorSliceIter<'a> {
                 let ptr = self.ptr;
                 self.ptr = unsafe { self.ptr.offset(len as isize) };
                 self.len -= len;
-                Some(CuVectorSlice { parent: PhantomData, len, ptr })
+                Some(CuVectorSlice { _parent: PhantomData, len, ptr })
             }
             false => None
         }
@@ -49,7 +49,7 @@ impl<'a> CuVectorSliceIterMut<'a> {
                 let ptr = self.ptr;
                 self.ptr = unsafe { self.ptr.offset(len as isize) };
                 self.len -= len;
-                Some(CuVectorSliceMut { parent: PhantomData, len, ptr })
+                Some(CuVectorSliceMut { _parent: PhantomData, len, ptr })
             }
             false => None
         }
