@@ -1,7 +1,9 @@
 # cumath
 Cuda-based matrix/vector computations
 
+Install nvcc before using this library
 CuVector and CuMatrix are allocated on device during their lifetime.
+
 
 Example :
 ```rust
