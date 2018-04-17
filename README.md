@@ -2,6 +2,7 @@
 Cuda-based matrix/vector computations
 
 Install nvcc before using this library
+
 CuVector and CuMatrix are allocated on device during their lifetime.
 
 
@@ -38,3 +39,5 @@ fn main() {
 }
 
 ```
+
+For more info, run 'cargo doc --open'
