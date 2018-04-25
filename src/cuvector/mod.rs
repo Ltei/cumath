@@ -3,6 +3,7 @@ use std::{marker::PhantomData, mem::size_of};
 
 use ffi::{cuda_ffi::*, vectorkernel_ffi::*};
 use meta::codec::*;
+use cuda::*;
 
 #[cfg(not(feature = "disable_checks"))]
 use meta::assert::*;
@@ -71,7 +72,7 @@ pub trait CuVectorOp {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(self.len(), "self.len()", data.len(), "data.len()");
         }
-        cuda_memcpy(data.as_mut_ptr(), self.as_ptr(), data.len()*size_of::<f32>(), CudaMemcpyKind::DeviceToHost);
+        cuda_memcpy(data.as_mut_ptr(), self.as_ptr(), data.len()*size_of::<f32>(), cudaMemcpyKind::DeviceToHost);
     }
 
     #[allow(dead_code)]
@@ -158,7 +159,7 @@ pub trait CuVectorOpMut: CuVectorOp {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(self.len(), "self.len()", data.len(), "data.len()");
         }
-        cuda_memcpy(self.as_mut_ptr(), data.as_ptr(), data.len()*size_of::<f32>(), CudaMemcpyKind::HostToDevice);
+        cuda_memcpy(self.as_mut_ptr(), data.as_ptr(), data.len()*size_of::<f32>(), cudaMemcpyKind::HostToDevice);
     }
 
     /// Clone device memory into this vector.
@@ -166,56 +167,71 @@ pub trait CuVectorOpMut: CuVectorOp {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(self.len(), "self.len()", source.len(), "data.len()");
         }
-        cuda_memcpy(self.as_mut_ptr(), source.as_ptr(), self.len()*size_of::<f32>(), CudaMemcpyKind::DeviceToDevice);
+        cuda_memcpy(self.as_mut_ptr(), source.as_ptr(), self.len()*size_of::<f32>(), cudaMemcpyKind::DeviceToDevice);
     }
 
     /// Initializes the vector with value.
-    fn init(&mut self, value: f32) {
-        unsafe { VectorKernel_init(self.as_mut_ptr(), self.len() as i32, value) }
+    fn init(&mut self, value: f32, stream: &CudaStream) {
+        unsafe { VectorKernel_init(self.as_mut_ptr(), self.len() as i32, value, stream.stream) }
     }
 
     /// Add value to each element of the vector.
-    fn add_value_self(&mut self, value: f32) {
-        unsafe { VectorKernel_addValue(self.as_ptr(), self.as_mut_ptr(), self.len() as i32, value) }
+    fn add_value_self(&mut self, value: f32, stream: &CudaStream) {
+        unsafe { VectorKernel_addValue(self.as_ptr(), self.as_mut_ptr(), self.len() as i32, value, stream.stream) }
     }
 
     /// Scale each element of the vector by value.
-    fn scale_self(&mut self, value: f32) {
-        unsafe { VectorKernel_scl(self.as_ptr(), self.as_mut_ptr(), self.len() as i32, value) }
+    fn scale_self(&mut self, value: f32, stream: &CudaStream) {
+        unsafe { VectorKernel_scl(self.as_ptr(), self.as_mut_ptr(), self.len() as i32, value, stream.stream) }
     }
 
     /// Add an other vector to this one.
-    fn add_self(&mut self, right_op: &CuVectorOp) {
+    fn add_self(&mut self, right_op: &CuVectorOp, stream: &CudaStream) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(self.len(), "self.len()", right_op.len(), "right_op.len()");
         }
-        unsafe { VectorKernel_add(self.as_ptr(), right_op.as_ptr(), self.as_mut_ptr(), self.len() as i32) }
+        unsafe { VectorKernel_add(self.as_ptr(), right_op.as_ptr(), self.as_mut_ptr(), self.len() as i32, stream.stream) }
     }
 
     /// Substract an other vector to this one.
-    fn sub_self(&mut self, right_op: &CuVectorOp) {
+    fn sub_self(&mut self, right_op: &CuVectorOp, stream: &CudaStream) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(self.len(), "self.len()", right_op.len(), "right_op.len()");
         }
-        unsafe { VectorKernel_sub(self.as_ptr(), right_op.as_ptr(), self.as_mut_ptr(), self.len() as i32) }
+        unsafe { VectorKernel_sub(self.as_ptr(), right_op.as_ptr(), self.as_mut_ptr(), self.len() as i32, stream.stream) }
     }
 
     /// Multiply each element of the vector by the corresponding element in the parameter vector.
-    fn pmult_self(&mut self, right_op: &CuVectorOp) {
+    fn pmult_self(&mut self, right_op: &CuVectorOp, stream: &CudaStream) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(self.len(), "self.len()", right_op.len(), "right_op.len()");
         }
-        unsafe { VectorKernel_pmult(self.as_ptr(), right_op.as_ptr(), self.as_mut_ptr(), self.len() as i32) }
+        unsafe { VectorKernel_pmult(self.as_ptr(), right_op.as_ptr(), self.as_mut_ptr(), self.len() as i32, stream.stream) }
     }
 
     /// Multiply each element of the vector by itself.
-    fn psquare_self(&mut self) {
-        unsafe { VectorKernel_psquare(self.as_ptr(),self.as_mut_ptr(), self.len() as i32) }
+    fn psquare_self(&mut self, stream: &CudaStream) {
+        unsafe { VectorKernel_psquare(self.as_ptr(),self.as_mut_ptr(), self.len() as i32, stream.stream) }
     }
 
     /// Apply the sigmoid function to each element of the vector.
-    fn sigmoid_self(&mut self) {
-        unsafe { VectorKernel_sigmoid(self.as_ptr(), self.as_mut_ptr(), self.len() as i32) }
+    fn sigmoid_self(&mut self, stream: &CudaStream) {
+        unsafe { VectorKernel_sigmoid(self.as_ptr(), self.as_mut_ptr(), self.len() as i32, stream.stream) }
+    }
+
+    /// self[i] = self[i] > threshold ? 1.0 : 0.0
+    fn binarize_self(&mut self, threshold: f32, stream: &CudaStream) {
+        unsafe { VectorKernel_binarize(self.as_ptr(), threshold, self.as_mut_ptr(), self.len() as i32, stream.stream) }
+    }
+
+    fn binarize_one_max_self(&mut self, stream: &CudaStream) {
+        unsafe { VectorKernel_binarizeOneMax(self.as_ptr(), self.as_mut_ptr(), self.len() as i32, stream.stream) }
+    }
+
+    fn custom_error_calc_self(&mut self, ideal_vector: &CuVectorOp, threshold: f32, scale_foff: f32, scale_fon: f32, stream: &CudaStream) {
+        unsafe { VectorKernel_customErrorCalc(self.as_ptr(), ideal_vector.as_ptr(),
+                                              threshold, scale_foff, scale_fon,
+                                              self.as_mut_ptr(), self.len() as i32, stream.stream) }
     }
 
 }
@@ -259,8 +275,7 @@ mod tests {
     #[test]
     fn test() {
         let mut vector = CuVector::new(2, 0.0);
-        vector.add_value_self(-1.2);
-        vector.dev_print("Hello");
+        vector.add_value_self(-1.2, &DEFAULT_STREAM);
     }
 
 }

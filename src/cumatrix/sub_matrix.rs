@@ -33,6 +33,7 @@ impl_CuMatrixOpMut_fragmented!(CuSubMatrixMut<'a>, 'a);
 #[cfg(test)]
 mod tests {
     use super::{CuMatrix, CuMatrixOp, CuMatrixOpMut};
+    use cuda::*;
 
     #[test]
     fn getters() {
@@ -77,7 +78,7 @@ mod tests {
     fn init() {
         let value = -1.254;
         let mut matrix = CuMatrix::new(2, 3, 0.0);
-        matrix.slice_mut(0, 1, 1, 2).init(value);
+        matrix.slice_mut(0, 1, 1, 2).init(value, &DEFAULT_STREAM);
 
         let output = &mut[0.0; 6];
         matrix.clone_to_host(output);

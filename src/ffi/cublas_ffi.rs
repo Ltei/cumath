@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use ffi::cuda_ffi::*;
 
 
 pub enum StructCublasContext {}
@@ -70,6 +71,8 @@ extern {
                           B: *const f32, ldb: i32,
                           beta: *const f32,
                           C: *mut f32, ldc: i32) -> CublasStatus;
+
+    fn cublasSetStream_v2(handle: *mut StructCublasContext, stream: *mut Struct_cudaStream_t) -> CublasStatus;
 }
 
 
@@ -150,5 +153,15 @@ pub fn cublas_sgemm(handle: *mut StructCublasContext,
     }
     #[cfg(feature = "disable_checks")] {
         unsafe { cublasSgemm_v2(handle, transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc) };
+    }
+}
+
+#[inline]
+pub fn cublas_set_stream(handle: *mut StructCublasContext, stream: *mut Struct_cudaStream_t) {
+    #[cfg(not(feature = "disable_checks"))] {
+        unsafe { cublasSetStream_v2(handle, stream) }.assert_success()
+    }
+    #[cfg(feature = "disable_checks")] {
+        unsafe { cublasSetStream_v2(handle, stream) };
     }
 }

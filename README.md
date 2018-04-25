@@ -1,4 +1,5 @@
 # cumath
+
 Cuda-based matrix/vector computations
 
 Install nvcc before using this library
@@ -6,7 +7,28 @@ Install nvcc before using this library
 CuVector and CuMatrix are allocated on device during their lifetime.
 
 
-Example :
+## Implemented :
+
+- GPU memory management
+- Vector
+- Matrix
+- CuBLAS
+- CuRAND
+- Cuda streams
+
+## To be implemented :
+
+- Data type genericity (being able to use integer vectors)
+- User-defined Cuda kernels
+- More built-in functions
+
+## Won't be implemented
+
+- Backend choice with CPU (This would rather be a higher level library)
+
+
+## Example :
+
 ```rust
 extern crate cumath;
 use cumath::*;
@@ -39,5 +61,6 @@ fn main() {
 }
 
 ```
+
 
 For more info, run 'cargo doc --open'

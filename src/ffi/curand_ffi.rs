@@ -1,6 +1,7 @@
 
 #![allow(dead_code)]
 
+use ffi::cuda_ffi::*;
 
 
 pub enum StructCurandGenerator {}
@@ -50,10 +51,11 @@ pub enum CurandRngType {
 
 extern {
     fn curandCreateGenerator(generator: *mut*mut StructCurandGenerator, rng_type: CurandRngType) -> CurandStatus;
-
     fn curandDestroyGenerator(generator: *mut StructCurandGenerator) -> CurandStatus;
 
     fn curandGenerateUniform(generator: *mut StructCurandGenerator, outputPtr: *mut f32, num: usize) -> CurandStatus;
+
+    fn curandSetStream(generator: *mut StructCurandGenerator, stream: cudaStream_t) -> CurandStatus;
 }
 
 
@@ -83,3 +85,15 @@ pub fn curand_generate_uniform(generator: *mut StructCurandGenerator, output_ptr
         unsafe { curandGenerateUniform(generator, output_ptr, num) };
     }
 }
+
+pub fn curand_set_stream(generator: *mut StructCurandGenerator, stream: cudaStream_t) {
+    #[cfg(not(feature = "disable_checks"))] {
+        unsafe { curandSetStream(generator, stream) }.assert_success()
+    }
+    #[cfg(feature = "disable_checks")] {
+        unsafe { curandSetStream(generator, stream) };
+    }
+}
+
+
+

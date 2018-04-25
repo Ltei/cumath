@@ -48,6 +48,9 @@ pub mod cudata {
     }
     impl<'a> CuDataSliceIter<'a> {
 
+        #[inline]
+        pub fn len(&self) -> usize { self.len }
+
         /// Returns Some if the iterator's remaining length is more than 'len'
         /// Returns None otherwise
         pub fn next_vector<'b, 'c>(&'c mut self, len: usize) -> Option<CuVectorSlice<'b>> where 'a: 'b, 'b: 'c {
@@ -96,6 +99,9 @@ pub mod cudata {
         pub(super) ptr: *mut f32,
     }
     impl<'a> CuDataSliceMutIter<'a> {
+
+        #[inline]
+        pub fn len(&self) -> usize { self.len }
 
         /// Returns Some if the iterator's remaining length is more than 'len'
         /// Returns None otherwise

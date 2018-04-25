@@ -30,7 +30,7 @@ impl CuMatrix {
         let len = rows*cols;
         let mut data = ptr::null_mut();
         cuda_malloc(&mut data, len*size_of::<f32>());
-        unsafe { VectorKernel_init(data as *mut f32, len as i32, init_value) }
+        unsafe { VectorKernel_init(data as *mut f32, len as i32, init_value, DEFAULT_STREAM.stream) }
         CuMatrix {
             rows, cols, len,
             ptr: data as *mut f32,
@@ -81,8 +81,8 @@ impl CuMatrix {
     }
 
     /// y[i][j] = a*y[i][j]+b
-    pub fn aypb(a: f32, b: f32, y: &mut CuMatrixOpMut) {
-        unsafe { MatrixKernel_aYpb(a, b, y.as_mut_ptr(), y.leading_dimension() as i32, y.rows() as i32, y.cols() as i32) }
+    pub fn aypb(a: f32, b: f32, y: &mut CuMatrixOpMut, stream: &CudaStream) {
+        unsafe { MatrixKernel_aYpb(a, b, y.as_mut_ptr(), y.leading_dimension() as i32, y.rows() as i32, y.cols() as i32, stream.stream) }
     }
 
 }
@@ -92,6 +92,7 @@ impl CuMatrix {
 #[cfg(test)]
 mod tests {
     use super::{CuMatrix, CuMatrixOp, CuMatrixOpMut};
+    use cuda::*;
 
     fn assert_equals_float(a: f32, b: f32) {
         let d = a-b;
@@ -131,7 +132,7 @@ mod tests {
     fn init() {
         let value = -1.254;
         let mut matrix = CuMatrix::new(2, 3, 0.0);
-        matrix.init(value);
+        matrix.init(value, &DEFAULT_STREAM);
 
         let output = &mut[0.0; 6];
         matrix.clone_to_host(output);
@@ -159,7 +160,7 @@ mod tests {
         let data = &[0.0, 1.0, 2.0, 0.1, 1.1, 2.1];
         let mut matrix = super::CuMatrix::from_data(3, 2, data);
 
-        CuMatrix::aypb(a, b, &mut matrix);
+        CuMatrix::aypb(a, b, &mut matrix, &DEFAULT_STREAM);
 
         let output = &mut [0.0; 6];
         matrix.clone_to_host(output);

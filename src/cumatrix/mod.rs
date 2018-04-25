@@ -4,6 +4,7 @@ use std::{marker::PhantomData, mem::size_of};
 
 use ffi::{cuda_ffi::*, matrixkernel_ffi::*};
 use meta::codec::*;
+use cuda::*;
 
 #[cfg(not(feature = "disable_checks"))]
 use meta::assert::*;
@@ -77,7 +78,7 @@ pub trait CuMatrixOp {
                       self.leading_dimension() * size_of::<f32>(),
                       self.rows() * size_of::<f32>(),
                       self.cols(),
-                      CudaMemcpyKind::DeviceToHost);
+                      cudaMemcpyKind::DeviceToHost);
     }
 
 
@@ -149,7 +150,7 @@ pub trait CuMatrixOpMut: CuMatrixOp  {
                       self.rows() * size_of::<f32>(),
                       self.rows() * size_of::<f32>(),
                       self.cols(),
-                      CudaMemcpyKind::HostToDevice);
+                      cudaMemcpyKind::HostToDevice);
     }
 
     /// Clone a matrix's data to this matrix's data.
@@ -163,46 +164,46 @@ pub trait CuMatrixOpMut: CuMatrixOp  {
                       data.leading_dimension() * size_of::<f32>(),
                       self.rows() * size_of::<f32>(),
                       self.cols(),
-                      CudaMemcpyKind::DeviceToDevice);
+                      cudaMemcpyKind::DeviceToDevice);
     }
 
-    /// Initializes the matrix with value.
-    fn init(&mut self, value: f32) {
+    /// Initializes the matrix with 'value'.
+    fn init(&mut self, value: f32, stream: &CudaStream) {
         unsafe {
             MatrixKernel_init(self.as_mut_ptr(), self.leading_dimension() as i32,
-                              self.rows() as i32, self.cols() as i32, value);
+                              self.rows() as i32, self.cols() as i32, value, stream.stream);
         }
     }
 
     /// Add value to each matrix of the vector.
-    fn add_value_self(&mut self, value: f32) {
+    fn add_value_self(&mut self, value: f32, stream: &CudaStream) {
         unsafe {
             MatrixKernel_addValue(self.as_ptr(), self.leading_dimension() as i32,
                                   self.as_mut_ptr(), self.leading_dimension() as i32,
-                                  self.rows() as i32, self.cols() as i32, value);
+                                  self.rows() as i32, self.cols() as i32, value, stream.stream);
         }
     }
 
-    /// Scale each element of the matrix by value.
-    fn scale_self(&mut self, value: f32) {
+    /// Scale each element of the matrix by 'value'.
+    fn scale_self(&mut self, value: f32, stream: &CudaStream) {
         unsafe {
             MatrixKernel_scale(self.as_ptr(), self.leading_dimension() as i32,
                                self.as_mut_ptr(), self.leading_dimension() as i32,
-                               self.rows() as i32, self.cols() as i32, value);
+                               self.rows() as i32, self.cols() as i32, value, stream.stream);
         }
     }
 
     /// Add an other matrix to this one.
-    fn add_self(&mut self, to_add: &CuMatrixOp) {
+    fn add_self(&mut self, to_add: &CuMatrixOp, stream: &CudaStream) {
         #[cfg(not(feature = "disable_checks"))] {
-            assert_eq_usize(self.rows(), "self.rows", to_add.rows(), "to_add.rows()");
-            assert_eq_usize(self.cols(), "self.cols", to_add.cols(), "to_add.cols()");
+            assert_eq_usize(self.rows(), "self.rows()", to_add.rows(), "to_add.rows()");
+            assert_eq_usize(self.cols(), "self.cols()", to_add.cols(), "to_add.cols()");
         }
         unsafe {
             MatrixKernel_add(self.as_ptr(), self.leading_dimension() as i32,
                              to_add.as_ptr(), to_add.leading_dimension() as i32,
                              self.as_mut_ptr(), self.leading_dimension() as i32,
-                             self.rows() as i32, self.cols() as i32)
+                             self.rows() as i32, self.cols() as i32, stream.stream)
         }
     }
 

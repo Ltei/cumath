@@ -1,4 +1,6 @@
 
+use cuda::*;
+
 
 /// A pointer over a matrix : It won't free the inner GPU-pointer when it goes out of scope
 pub struct CuMatrixPtr {

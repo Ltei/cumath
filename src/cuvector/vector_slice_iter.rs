@@ -10,6 +10,9 @@ pub struct CuVectorSliceIter<'a> {
 }
 impl<'a> CuVectorSliceIter<'a> {
 
+    #[inline]
+    pub fn len(&self) -> usize { self.len }
+
     pub fn next<'b, 'c>(&'c mut self, len: usize) -> Option<CuVectorSlice<'b>> where 'a: 'b, 'b: 'c {
         match len <= self.len {
             true => {
@@ -43,6 +46,11 @@ pub struct CuVectorSliceIterMut<'a> {
     pub(crate) ptr: *mut f32,
 }
 impl<'a> CuVectorSliceIterMut<'a> {
+
+    #[inline]
+    pub fn len(&self) -> usize { self.len }
+
+
     pub fn next<'b, 'c>(&'c mut self, len: usize) -> Option<CuVectorSliceMut<'b>> where 'a: 'b, 'b: 'c {
         match len <= self.len {
             true => {
