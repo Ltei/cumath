@@ -175,7 +175,7 @@ pub trait CuMatrixOpMut: CuMatrixOp  {
     }
 
     /// Add value to each matrix of the vector.
-    fn add_value_self(&mut self, value: f32, stream: &CudaStream) {
+    fn add_value(&mut self, value: f32, stream: &CudaStream) {
         unsafe {
             MatrixKernel_addValue(self.as_ptr(), self.leading_dimension() as i32,
                                   self.as_mut_ptr(), self.leading_dimension() as i32,
@@ -184,7 +184,7 @@ pub trait CuMatrixOpMut: CuMatrixOp  {
     }
 
     /// Scale each element of the matrix by 'value'.
-    fn scale_self(&mut self, value: f32, stream: &CudaStream) {
+    fn scale(&mut self, value: f32, stream: &CudaStream) {
         unsafe {
             MatrixKernel_scale(self.as_ptr(), self.leading_dimension() as i32,
                                self.as_mut_ptr(), self.leading_dimension() as i32,
@@ -193,7 +193,7 @@ pub trait CuMatrixOpMut: CuMatrixOp  {
     }
 
     /// Add an other matrix to this one.
-    fn add_self(&mut self, to_add: &CuMatrixOp, stream: &CudaStream) {
+    fn add(&mut self, to_add: &CuMatrixOp, stream: &CudaStream) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(self.rows(), "self.rows()", to_add.rows(), "to_add.rows()");
             assert_eq_usize(self.cols(), "self.cols()", to_add.cols(), "to_add.cols()");
