@@ -2,6 +2,7 @@
 extern crate cc;
 
 use std::process::Command;
+use std::str;
 
 
 fn get_ccbin() -> Result<String, &'static str> {

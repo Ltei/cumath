@@ -21,6 +21,7 @@ CuVector and CuMatrix are allocated on device during their lifetime.
 - Data type genericity (being able to use integer vectors)
 - User-defined Cuda kernels
 - More built-in functions
+- Improve automatic cuda-compatible c compiler detection
 
 ## Won't be implemented
 
