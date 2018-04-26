@@ -83,10 +83,11 @@ mod tests {
         });
     }
 
-    use std::time::Instant;
 
+    /*
     #[test]
     fn benchmark_stream() {
+        use std::time::Instant;
 
         let mut generator1 = CurandGenerator::new(CurandRngType::PseudoDefault);
         let mut generator2 = CurandGenerator::new(CurandRngType::PseudoDefault);
@@ -202,6 +203,7 @@ mod tests {
         let dt = t0.elapsed();
         println!("32 finished in {}.{}", dt.as_secs(), dt.subsec_nanos());
     }
+    */
 
 
 }

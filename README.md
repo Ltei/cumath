@@ -56,20 +56,27 @@ fn assert_equals_float(a: f32, b: f32) {
 fn main() {
     let value0 = -0.23254;
     let value1 = 1.185254;
-    let mut vector0 = CuVector::new(5, 0.0); //(len, initial_value)
-    let mut vector1 = CuVector::new(2, 0.0);
 
-    vector0.init(value0);
-    vector1.init(value1);
-    vector0.slice_mut(2 /*offset*/, 2 /*length*/).add_self(&vector1);
+    // Create a vector containing [value0, value0, value0, value0, value0]
+    let mut vector0 = CuVector::new(5, value0);
+    // Create a vector containing [value1]
+    let vector1 = CuVector::new(1, value1);
 
+    {
+        // Borrow a slice of vector0 with offset 2 and length 1
+        let mut slice = vector0.slice_mut(2, 1);
+        // Add vector1 to the slice
+        slice.add(&vector1, &DEFAULT_STREAM);
+    }
+
+    // Copy the data to host memory
     let mut output = vec![0.0; 5];
     vector0.clone_to_host(&mut output);
 
     assert_equals_float(output[0], value0);
     assert_equals_float(output[1], value0);
     assert_equals_float(output[2], value0+value1);
-    assert_equals_float(output[3], value0+value1);
+    assert_equals_float(output[3], value0);
     assert_equals_float(output[4], value0);
 }
 
@@ -89,20 +96,23 @@ fn assert_equals_float(a: f32, b: f32) {
 }
 
 fn main() {
-    let value0 = -0.23254;
-    let value1 = 1.185254;
-    let mut vector0 = CuVector::new(5, 0.0); //(len, initial_value)
-    let mut vector1 = CuVector::new(2, 0.0);
-    
-    let cublas = Cublas::new();                                      // Create an instance of CuBLAS
-    let matrix1 = CuMatrix::from_data(&[1.0, 2.0, -2.0, 4.0], 2, 2); // Create a 2*2 Matrix containing [2.0, -1.0, 0.0, 1.0] (matrices are row-ordered)
-    let matrix2 = CuMatrix::from_data(&[2.0, -1.0, 0.0, 1.0], 2, 2);
-    let output = CuMatrix::new(2, 2);                                // Create a Zero 2*2 Matrix
-    
-    cublas.mult_m_m(&matrix1, &matrix2, &mut output);                // Matrix-Matrix multiplication
+    // Create an instance of CuBLAS
+    let cublas = Cublas::new();
 
+    // Create a 2*2 Matrix containing [2.0, -1.0, 0.0, 1.0] (matrices are row-ordered)
+    let matrix1 = CuMatrix::from_data(2, 2, &[1.0, 2.0, -2.0, 4.0]);
+    // Create a 2*2 Matrix containing [2.0, -1.0, 0.0, 1.0]
+    let matrix2 = CuMatrix::from_data(2, 2, &[2.0, -1.0, 0.0, 1.0]);
+
+    // Create a Zero 2*2 Matrix
+    let mut output = CuMatrix::new(2, 2, 0.0);
+
+    // Matrix-Matrix multiplication
+    cublas.mult_m_m(&matrix1, &matrix2, &mut output);
+
+    // Copy the data to host memory
     let mut cpu_output = vec![0.0; 6];
-    output.clone_to_host(&cpu_output);
+    output.clone_to_host(&mut cpu_output);
 
     assert_equals_float(cpu_output[0], 4.0);
     assert_equals_float(cpu_output[1], 0.0);

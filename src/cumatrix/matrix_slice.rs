@@ -41,9 +41,7 @@ pub struct CuMatrixSliceMut<'a> {
     pub(crate) len: usize,
     pub(crate) ptr: *mut f32,
 }
-impl_CuPackedData!(CuMatrixSliceMut<'a>, 'a);
 impl_CuPackedDataMut!(CuMatrixSliceMut<'a>, 'a);
-impl_CuMatrixOp_packed!(CuMatrixSliceMut<'a>, 'a);
 impl_CuMatrixOpMut_packed!(CuMatrixSliceMut<'a>, 'a);
 
 impl <'a> CuMatrixSliceMut<'a> {

@@ -1,16 +1,16 @@
 
 
-use std::{marker::PhantomData, mem::size_of};
+use std::{marker::PhantomData, mem::size_of, fmt, ptr};
 
 use ffi::{cuda_ffi::*, matrixkernel_ffi::*};
-use meta::codec::*;
 use cuda::*;
 
 #[cfg(not(feature = "disable_checks"))]
 use meta::assert::*;
 
 
-
+#[macro_use]
+mod macros;
 
 mod matrix;
 pub use self::matrix::*;
@@ -20,12 +20,12 @@ mod sub_matrix;
 pub use self::sub_matrix::*;
 mod matrix_ptr;
 pub use self::matrix_ptr::*;
-
-
+mod math;
+pub use self::math::*;
 
 
 /// Immutable matrix operator trait.
-pub trait CuMatrixOp {
+pub trait CuMatrixOp: fmt::Debug {
 
     /// [inline]
     /// Returns the number of rows in the matrix.
@@ -51,6 +51,18 @@ pub trait CuMatrixOp {
     /// Returns a pointer on the matrix's data.
     #[inline]
     fn as_ptr(&self) -> *const f32;
+
+    /// Returns a new copy of 'self'.
+    fn clone(&self) -> CuMatrix where Self: Sized {
+        let mut output = {
+            let len = self.len();
+            let mut data = ptr::null_mut();
+            cuda_malloc(&mut data, len*size_of::<f32>());
+            CuMatrix { rows: self.rows(), cols: self.cols(), len, ptr: (data as *mut f32) }
+        };
+        output.clone_from_device(self);
+        output
+    }
 
     /// Returns an immutable sub-matrix.
     fn slice<'a>(&'a self, row_offset: usize, col_offset: usize, nb_rows: usize, nb_cols: usize) -> CuSubMatrix<'a> {
@@ -81,19 +93,6 @@ pub trait CuMatrixOp {
                       cudaMemcpyKind::DeviceToHost);
     }
 
-
-    #[allow(dead_code)]
-    fn dev_print(&self, msg: &str) {
-        let mut buffer = vec![0.0; self.len()];
-        self.clone_to_host(&mut buffer);
-        println!("{}", msg);
-        for row in 0..self.rows() {
-            for col in 0..self.cols() {
-                print!("{:.5}, ", buffer[row+col*self.rows()])
-            }
-            println!()
-        }
-    }
     #[allow(dead_code)]
     fn dev_assert_equals(&self, data: &[f32]) where Self: Sized {
         if self.len() != data.len() { panic!(); }
@@ -211,40 +210,12 @@ pub trait CuMatrixOpMut: CuMatrixOp  {
 
 
 
-impl Codec for CuMatrix {
-    type OutputType = CuMatrix;
-
-    fn encode(&self) -> String {
-        let mut host_data = vec![0.0; self.len()];
-        self.clone_to_host(host_data.as_mut_slice());
-
-        let mut output = format!("{} {} ", self.rows(), self.cols());
-        host_data.iter().for_each(|x| {
-            output.push_str(&format!("{} ", x))
-        });
-        output
-    }
-    fn decode(data: &str) -> CuMatrix {
-        let mut split = data.split_whitespace();
-        let rows = split.next().unwrap().parse::<usize>().unwrap();
-        let cols = split.next().unwrap().parse::<usize>().unwrap();
-        CuMatrix::from_data(rows, cols,
-            split.map(|x| {
-                x.parse::<f32>().unwrap_or_else(|err| { panic!("{}", err) })
-            }).collect::<Vec<f32>>().as_slice()
-        )
-    }
-}
-
-
-
-
-// TESTS
 
 #[cfg(test)]
 mod tests {
 
     use super::*;
+    use meta::codec::Codec;
 
     #[test]
     fn codec() {

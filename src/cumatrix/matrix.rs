@@ -1,7 +1,8 @@
 
 use std::{ptr, mem::size_of};
+
 use super::*;
-use ffi::{vectorkernel_ffi::*};
+use ffi::vectorkernel_ffi::*;
 
 
 
@@ -18,9 +19,7 @@ impl Drop for CuMatrix {
         cuda_free(self.ptr);
     }
 }
-impl_CuPackedData!(CuMatrix);
 impl_CuPackedDataMut!(CuMatrix);
-impl_CuMatrixOp_packed!(CuMatrix);
 impl_CuMatrixOpMut_packed!(CuMatrix);
 
 impl CuMatrix {
@@ -36,7 +35,6 @@ impl CuMatrix {
             ptr: data as *mut f32,
         }
     }
-
     /// Returns a new GPU-allocated matrix from CPU data.
     pub fn from_data(rows: usize, cols: usize, data: &[f32]) -> CuMatrix {
         #[cfg(not(feature = "disable_checks"))] {
@@ -80,11 +78,6 @@ impl CuMatrix {
         }
     }
 
-    /// y[i][j] = a*y[i][j]+b
-    pub fn aypb(a: f32, b: f32, y: &mut CuMatrixOpMut, stream: &CudaStream) {
-        unsafe { MatrixKernel_aYpb(a, b, y.as_mut_ptr(), y.leading_dimension() as i32, y.rows() as i32, y.cols() as i32, stream.stream) }
-    }
-
 }
 
 
@@ -93,13 +86,6 @@ impl CuMatrix {
 mod tests {
     use super::{CuMatrix, CuMatrixOp, CuMatrixOpMut};
     use cuda::*;
-
-    fn assert_equals_float(a: f32, b: f32) {
-        let d = a-b;
-        if d < -0.000001 || d > 0.000001 {
-            panic!("{} != {}", a, b);
-        }
-    }
 
     #[test]
     fn getters() {
@@ -151,23 +137,6 @@ mod tests {
         matrix.slice(0, 1, 3, 1).dev_assert_equals(&[0.1, 1.1, 2.1]);
         matrix.slice(1, 0, 2, 2).slice(0, 1, 1, 1).dev_assert_equals(&[1.1]);
         matrix.slice_col(1, 1).slice(1, 0, 1, 1).dev_assert_equals(&[1.1]);
-    }
-
-    #[test]
-    fn aypb() {
-        let a = -1.0;
-        let b = 22.142544;
-        let data = &[0.0, 1.0, 2.0, 0.1, 1.1, 2.1];
-        let mut matrix = super::CuMatrix::from_data(3, 2, data);
-
-        CuMatrix::aypb(a, b, &mut matrix, &DEFAULT_STREAM);
-
-        let output = &mut [0.0; 6];
-        matrix.clone_to_host(output);
-
-        for i in 0..data.len() {
-            assert_equals_float(output[i], a*data[i]+b);
-        }
     }
 
 }

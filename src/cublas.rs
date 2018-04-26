@@ -120,81 +120,12 @@ impl Cublas {
         cublas_saxpy(self.handle, x.len() as i32, &alpha, x.as_ptr(), 1, y.as_mut_ptr(), 1)
     }
 
-    /*pub fn clone_weighted_from_device(&self, data: &[&CuPackedData], weights: &[f32], output: &mut CuPackedDataMut, stream: &CudaStream) {
-        #[cfg(not(feature = "disable_checks"))] {
-            assert_eq_usize(data.len(), "data.len()", weights.len(), "weights.len()");
-        }
-        use ffi::vectorkernel_ffi;
-        unsafe { vectorkernel_ffi::VectorKernel_init(output.as_mut_ptr(), output.len() as i32, 0.0, stream.stream) };
-
-        for i in 0..data.len() {
-            self.axpy(weights[i], data[i], output);
-        }
-    }*/
 }
 
 
 #[cfg(test)]
 mod tests {
-    use std::time::Instant;
     use super::*;
-
-    fn assert_equals_float(a: f32, b: f32) {
-        let d = a-b;
-        if d < -0.000001 || d > 0.000001 {
-            panic!("{} != {}", a, b);
-        }
-    }
-
-    #[test]
-    fn benchmark_stream() {
-        let input_data = vec![-1.0; 900];
-
-        let mut cublas0 = Cublas::new();
-        let mut cublas1 = Cublas::new();
-
-        let stream0 = CudaStream::new();
-        let stream1 = CudaStream::new();
-
-        let matrix1 = CuMatrix::from_data(30, 30, input_data.as_slice());
-        let matrix2 = CuMatrix::from_data(30, 30, input_data.as_slice());
-        let mut output0 = CuMatrix::new(30, 30, 0.0);
-        let mut output1 = CuMatrix::new(30, 30, 0.0);
-
-
-        let t0 = Instant::now();
-        cublas0.set_stream(&stream0);
-        for _ in 0..100000 {
-            cublas0.mult_m_m(&matrix1, &matrix2, &mut output0);
-        }
-        stream0.synchronize();
-        let dt = t0.elapsed();
-        println!("1 finished in {}.{}", dt.as_secs(), dt.subsec_nanos());
-
-        let t0 = Instant::now();
-        for _ in 0..50000 {
-            cublas0.set_stream(&stream0);
-            cublas0.mult_m_m(&matrix1, &matrix2, &mut output0);
-            cublas0.set_stream(&stream1);
-            cublas0.mult_m_m(&matrix1, &matrix2, &mut output1);
-        }
-        stream0.synchronize();
-        stream1.synchronize();
-        let dt = t0.elapsed();
-        println!("2 finished in {}.{}", dt.as_secs(), dt.subsec_nanos());
-
-        let t0 = Instant::now();
-        cublas0.set_stream(&stream0);
-        cublas1.set_stream(&stream1);
-        for _ in 0..50000 {
-            cublas0.mult_m_m(&matrix1, &matrix2, &mut output0);
-            cublas1.mult_m_m(&matrix1, &matrix2, &mut output1);
-        }
-        stream0.synchronize();
-        stream1.synchronize();
-        let dt = t0.elapsed();
-        println!("3 finished in {}.{}", dt.as_secs(), dt.subsec_nanos());
-    }
 
     #[test]
     fn abs_sum() {
@@ -287,4 +218,59 @@ mod tests {
         assert_equals_float(output_buffer[4], -6.4);
         assert_equals_float(output_buffer[5], 2.2);
     }
+
+    /*
+    #[test]
+    fn benchmark_stream() {
+        use std::time::Instant;
+
+        let input_data = vec![-1.0; 900];
+
+        let mut cublas0 = Cublas::new();
+        let mut cublas1 = Cublas::new();
+
+        let stream0 = CudaStream::new();
+        let stream1 = CudaStream::new();
+
+        let matrix1 = CuMatrix::from_data(30, 30, input_data.as_slice());
+        let matrix2 = CuMatrix::from_data(30, 30, input_data.as_slice());
+        let mut output0 = CuMatrix::new(30, 30, 0.0);
+        let mut output1 = CuMatrix::new(30, 30, 0.0);
+
+
+        let t0 = Instant::now();
+        cublas0.set_stream(&stream0);
+        for _ in 0..100000 {
+            cublas0.mult_m_m(&matrix1, &matrix2, &mut output0);
+        }
+        stream0.synchronize();
+        let dt = t0.elapsed();
+        println!("1 finished in {}.{}", dt.as_secs(), dt.subsec_nanos());
+
+        let t0 = Instant::now();
+        for _ in 0..50000 {
+            cublas0.set_stream(&stream0);
+            cublas0.mult_m_m(&matrix1, &matrix2, &mut output0);
+            cublas0.set_stream(&stream1);
+            cublas0.mult_m_m(&matrix1, &matrix2, &mut output1);
+        }
+        stream0.synchronize();
+        stream1.synchronize();
+        let dt = t0.elapsed();
+        println!("2 finished in {}.{}", dt.as_secs(), dt.subsec_nanos());
+
+        let t0 = Instant::now();
+        cublas0.set_stream(&stream0);
+        cublas1.set_stream(&stream1);
+        for _ in 0..50000 {
+            cublas0.mult_m_m(&matrix1, &matrix2, &mut output0);
+            cublas1.mult_m_m(&matrix1, &matrix2, &mut output1);
+        }
+        stream0.synchronize();
+        stream1.synchronize();
+        let dt = t0.elapsed();
+        println!("3 finished in {}.{}", dt.as_secs(), dt.subsec_nanos());
+    }
+    */
+
 }

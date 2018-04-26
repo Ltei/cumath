@@ -19,13 +19,7 @@ mod tests {
 
     use std::{ptr, mem::size_of};
     use ffi::cuda_ffi::*;
-
-    fn assert_equals_float(a: f32, b: f32) {
-        let d = a - b;
-        if d < -0.000001 || d > 0.000001 {
-            panic!("{} != {}", a, b);
-        }
-    }
+    use meta::assert::*;
 
     #[test]
     fn MatrixKernel_init() {

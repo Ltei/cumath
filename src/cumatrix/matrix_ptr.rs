@@ -9,7 +9,5 @@ pub struct CuMatrixPtr {
     pub(crate) len: usize,
     pub(crate) ptr: *mut f32,
 }
-impl_CuPackedData!(CuMatrixPtr);
 impl_CuPackedDataMut!(CuMatrixPtr);
-impl_CuMatrixOp_packed!(CuMatrixPtr);
 impl_CuMatrixOpMut_packed!(CuMatrixPtr);

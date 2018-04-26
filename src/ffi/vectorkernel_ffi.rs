@@ -35,13 +35,7 @@ mod tests {
     use std::{ptr, mem::size_of};
     use ffi::cuda_ffi::*;
     use cuda::*;
-
-    fn assert_equals_float(a: f32, b: f32) {
-        let d = a-b;
-        if d < -0.000001 || d > 0.000001 {
-            panic!("{} != {}", a, b);
-        }
-    }
+    use meta::assert::*;
 
     #[test]
     fn VectorKernel_init() {
@@ -59,11 +53,6 @@ mod tests {
 
         buffer.iter().for_each(|x| { assert_equals_float(*x, value) });
     }
-    /*use __test::Bencher;
-    #[bench]
-    fn VectorKernel_init_bench(b: &mut Bencher) {
-        b.iter(|| add_two(2));
-    }*/
 
     #[test]
     fn VectorKernel_addValue() {
@@ -218,8 +207,6 @@ mod tests {
         cuda_memcpy(buffer.as_mut_ptr(), vector, buffer.len()*size_of::<f32>(), cudaMemcpyKind::DeviceToHost);
         cuda_free(vector);
 
-        buffer.iter().for_each(|x| print!("{}, ", x));
-        println!();
         for i in 0..buffer.len() {
             if i == 4 {
                 assert_equals_float(buffer[i], 1.0);

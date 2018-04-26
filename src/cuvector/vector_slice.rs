@@ -21,9 +21,7 @@ pub struct CuVectorSliceMut<'a> {
     pub(crate) len: usize,
     pub(crate) ptr: *mut f32,
 }
-impl_CuPackedData!(CuVectorSliceMut<'a>, 'a);
 impl_CuPackedDataMut!(CuVectorSliceMut<'a>, 'a);
-impl_CuVectorOp!(CuVectorSliceMut<'a>, 'a);
 impl_CuVectorOpMut!(CuVectorSliceMut<'a>, 'a);
 
 

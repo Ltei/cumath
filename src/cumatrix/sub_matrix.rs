@@ -24,7 +24,6 @@ pub struct CuSubMatrixMut<'a> {
     pub(crate) leading_dimension: usize,
     pub(crate) ptr: *mut f32,
 }
-impl_CuMatrixOp_fragmented!(CuSubMatrixMut<'a>, 'a);
 impl_CuMatrixOpMut_fragmented!(CuSubMatrixMut<'a>, 'a);
 
 

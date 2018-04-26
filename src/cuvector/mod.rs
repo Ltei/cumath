@@ -1,15 +1,15 @@
 
-use std::{marker::PhantomData, mem::size_of};
+use std::{marker::PhantomData, mem::size_of, fmt, ptr};
 
 use ffi::{cuda_ffi::*, vectorkernel_ffi::*};
-use meta::codec::*;
 use cuda::*;
 
 #[cfg(not(feature = "disable_checks"))]
 use meta::assert::*;
 
 
-
+#[macro_use]
+mod macros;
 
 mod vector;
 pub use self::vector::*;
@@ -19,10 +19,12 @@ mod vector_ptr;
 pub use self::vector_ptr::*;
 mod vector_slice_iter;
 pub use self::vector_slice_iter::*;
+mod math;
+pub use self::math::*;
 
 
 /// Immutable vector operator trait.
-pub trait CuVectorOp {
+pub trait CuVectorOp: fmt::Debug {
 
     /// [inline]
     /// Returns the vector's length.
@@ -34,8 +36,8 @@ pub trait CuVectorOp {
     #[inline]
     fn as_ptr(&self) -> *const f32;
 
-    /*/// Returns a new GPU-allocated copy of 'self'.
-    fn clone(&self) -> CuVector {
+    /// Returns a new copy of 'self'.
+    fn clone(&self) -> CuVector where Self: Sized {
         let mut output = {
             let len = self.len();
             let mut data = ptr::null_mut();
@@ -44,7 +46,7 @@ pub trait CuVectorOp {
         };
         output.clone_from_device(self);
         output
-    }*/
+    }
 
     /// Creates a vector slice starting from self.ptr()+offset, to self.ptr()+offset+len.
     fn slice<'a>(&'a self, offset: usize, len: usize) -> CuVectorSlice<'a> {
@@ -75,16 +77,6 @@ pub trait CuVectorOp {
         cuda_memcpy(data.as_mut_ptr(), self.as_ptr(), data.len()*size_of::<f32>(), cudaMemcpyKind::DeviceToHost);
     }
 
-    #[allow(dead_code)]
-    fn dev_print(&self, msg: &str) {
-        let mut buffer = vec![0.0; self.len()];
-        self.clone_to_host(&mut buffer);
-        print!("{}   ", msg);
-        for i in 0..self.len() {
-            print!("{:.5}, ", buffer[i])
-        }
-        println!()
-    }
     #[allow(dead_code)]
     fn dev_assert_equals(&self, data: &[f32]) where Self: Sized {
         if self.len() != data.len() { panic!(); }
@@ -147,6 +139,10 @@ pub trait CuVectorOpMut: CuVectorOp {
         }
     }
 
+    /// Returns a pointer over a vector :
+    /// - It won't free the inner GPU-pointer when it goes out of scope
+    /// - It won't check if the underlying memory is still allocated when used
+    /// -> Use at your own risk
     unsafe fn force_ownership(&mut self) -> CuVectorPtr {
         CuVectorPtr {
             len: self.len(),
@@ -176,17 +172,17 @@ pub trait CuVectorOpMut: CuVectorOp {
     }
 
     /// Add value to each element of the vector.
-    fn add_value_self(&mut self, value: f32, stream: &CudaStream) {
+    fn add_value(&mut self, value: f32, stream: &CudaStream) {
         unsafe { VectorKernel_addValue(self.as_ptr(), self.as_mut_ptr(), self.len() as i32, value, stream.stream) }
     }
 
     /// Scale each element of the vector by value.
-    fn scale_self(&mut self, value: f32, stream: &CudaStream) {
+    fn scl(&mut self, value: f32, stream: &CudaStream) {
         unsafe { VectorKernel_scl(self.as_ptr(), self.as_mut_ptr(), self.len() as i32, value, stream.stream) }
     }
 
     /// Add an other vector to this one.
-    fn add_self(&mut self, right_op: &CuVectorOp, stream: &CudaStream) {
+    fn add(&mut self, right_op: &CuVectorOp, stream: &CudaStream) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(self.len(), "self.len()", right_op.len(), "right_op.len()");
         }
@@ -194,7 +190,7 @@ pub trait CuVectorOpMut: CuVectorOp {
     }
 
     /// Substract an other vector to this one.
-    fn sub_self(&mut self, right_op: &CuVectorOp, stream: &CudaStream) {
+    fn sub(&mut self, right_op: &CuVectorOp, stream: &CudaStream) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(self.len(), "self.len()", right_op.len(), "right_op.len()");
         }
@@ -202,7 +198,7 @@ pub trait CuVectorOpMut: CuVectorOp {
     }
 
     /// Multiply each element of the vector by the corresponding element in the parameter vector.
-    fn pmult_self(&mut self, right_op: &CuVectorOp, stream: &CudaStream) {
+    fn pmult(&mut self, right_op: &CuVectorOp, stream: &CudaStream) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(self.len(), "self.len()", right_op.len(), "right_op.len()");
         }
@@ -210,25 +206,25 @@ pub trait CuVectorOpMut: CuVectorOp {
     }
 
     /// Multiply each element of the vector by itself.
-    fn psquare_self(&mut self, stream: &CudaStream) {
+    fn psquare(&mut self, stream: &CudaStream) {
         unsafe { VectorKernel_psquare(self.as_ptr(),self.as_mut_ptr(), self.len() as i32, stream.stream) }
     }
 
     /// Apply the sigmoid function to each element of the vector.
-    fn sigmoid_self(&mut self, stream: &CudaStream) {
+    fn sigmoid(&mut self, stream: &CudaStream) {
         unsafe { VectorKernel_sigmoid(self.as_ptr(), self.as_mut_ptr(), self.len() as i32, stream.stream) }
     }
 
     /// self[i] = self[i] > threshold ? 1.0 : 0.0
-    fn binarize_self(&mut self, threshold: f32, stream: &CudaStream) {
+    fn binarize(&mut self, threshold: f32, stream: &CudaStream) {
         unsafe { VectorKernel_binarize(self.as_ptr(), threshold, self.as_mut_ptr(), self.len() as i32, stream.stream) }
     }
 
-    fn binarize_one_max_self(&mut self, stream: &CudaStream) {
+    fn binarize_one_max(&mut self, stream: &CudaStream) {
         unsafe { VectorKernel_binarizeOneMax(self.as_ptr(), self.as_mut_ptr(), self.len() as i32, stream.stream) }
     }
 
-    fn custom_error_calc_self(&mut self, ideal_vector: &CuVectorOp, threshold: f32, scale_foff: f32, scale_fon: f32, stream: &CudaStream) {
+    fn custom_error_calc(&mut self, ideal_vector: &CuVectorOp, threshold: f32, scale_foff: f32, scale_fon: f32, stream: &CudaStream) {
         unsafe { VectorKernel_customErrorCalc(self.as_ptr(), ideal_vector.as_ptr(),
                                               threshold, scale_foff, scale_fon,
                                               self.as_mut_ptr(), self.len() as i32, stream.stream) }
@@ -236,35 +232,13 @@ pub trait CuVectorOpMut: CuVectorOp {
 
 }
 
-impl<T: CuVectorOp> Codec for T {
-    type OutputType = CuVector;
 
-    fn encode(&self) -> String {
-        let mut host_data = vec![0.0; self.len()];
-        self.clone_to_host(host_data.as_mut_slice());
-
-        host_data.iter().map(|x| {
-            format!("{} ", x)
-        }).collect::<String>()
-    }
-    fn decode(data: &str) -> CuVector {
-        CuVector::from_data(
-            data.split_whitespace().map(|x| {
-                x.parse::<f32>().unwrap_or_else(|err| { panic!("{}", err) })
-            }).collect::<Vec<f32>>().as_slice()
-        )
-    }
-}
-
-
-
-
-// TESTS
 
 #[cfg(test)]
 mod tests {
 
     use super::*;
+    use meta::codec::Codec;
 
     #[test]
     fn codec() {
@@ -275,7 +249,7 @@ mod tests {
     #[test]
     fn test() {
         let mut vector = CuVector::new(2, 0.0);
-        vector.add_value_self(-1.2, &DEFAULT_STREAM);
+        vector.add_value(-1.2, &DEFAULT_STREAM);
     }
 
 }
