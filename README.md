@@ -31,14 +31,14 @@ CuVector and CuMatrix are allocated on device during their lifetime.
 Add Cumath to your Cargo.toml:
 
     [dependencies]
-    cumath = "0.2.1"
+    cumath = "0.2.2"
 
 Then in your main.rs :
 
     extern crate cumath;
 
 
-## Example
+## Examples
 
 ### Simple vector addition
 
