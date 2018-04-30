@@ -39,8 +39,7 @@ fn main() {
     println!("cargo:rustc-link-lib=dylib=cublas");
     println!("cargo:rustc-link-lib=dylib=curand");
 
-    let ccbin = get_ccbin().unwrap();
-    std::env::set_var("CXX", ccbin);
+    //std::env::set_var("CXX", get_ccbin().unwrap());
 
     cc::Build::new()
         .cuda(true)
