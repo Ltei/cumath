@@ -1,10 +1,10 @@
 # cumath
 
-This library is still under developement!
-
 Cuda-based matrix/vector computations
 
-Install nvcc before using this library
+Install nvcc before : https://developer.nvidia.com/cuda-toolkit
+
+/!\ This library is still under developement!
 
 /!\ The detection of cuda compatible c compiler is very basic and only works for linux, if it doesn't work for you, you can try to comment this line in build.rs : "std::env::set_var("CXX", get_ccbin().unwrap());"
 
