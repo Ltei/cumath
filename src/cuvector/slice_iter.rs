@@ -72,28 +72,3 @@ impl<'a> CuVectorSliceIterMut<'a> {
     }
 
 }
-
-
-#[cfg(test)]
-mod tests {
-
-    /*use vector::{CuVectorOp, CuVectorOpMut};
-
-    #[test]
-    fn test() {
-
-        let mut vector = super::CuVector::new(10, 0.0);
-        //let mut iter = vector.slice_mut_iter();
-        let mut iter = vector.slice_iter();
-        let mut iter = vector.slice_iter();
-        let mut iter = vector.slice_iter();
-
-        let _slice1 = iter.next(2).unwrap();
-        let _slice2 = iter.next(2).unwrap();
-
-        /*let slice1 = iter.next2(2).unwrap();
-        iter.next2(2).unwrap();*/
-
-    }*/
-
-}

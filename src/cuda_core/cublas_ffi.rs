@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
-use ffi::cuda_ffi::*;
+use super::cuda_ffi::*;
+
 
 
 pub enum StructCublasContext {}
@@ -21,8 +22,22 @@ pub enum CublasStatus {
     LicenseError = 16,
 }
 impl CublasStatus {
-    pub fn assert_success(&self) {
+    fn assert_success(&self) {
         assert_eq!(self, &CublasStatus::Success);
+    }
+    fn get_error_str(&self) -> Option<&'static str> {
+        match *self {
+            CublasStatus::Success => None,
+            CublasStatus::NotInitialized => Some("NotInitialized"),
+            CublasStatus::AllocFailed => Some("AllocFailed"),
+            CublasStatus::InvalidValue => Some("InvalidValue"),
+            CublasStatus::ArchMismatch => Some("ArchMismatch"),
+            CublasStatus::MappingError => Some("MappingError"),
+            CublasStatus::ExecutionFailed => Some("ExecutionFailed"),
+            CublasStatus::InternalError => Some("InternalError"),
+            CublasStatus::NotSupported => Some("NotSupported"),
+            CublasStatus::LicenseError => Some("LicenseError"),
+        }
     }
 }
 
@@ -77,12 +92,13 @@ extern {
 
 
 #[inline]
-pub fn cublas_create(handle: *mut*mut StructCublasContext) {
+pub fn cublas_create(handle: *mut*mut StructCublasContext) -> Option<&'static str> {
     #[cfg(not(feature = "disable_checks"))] {
-        unsafe { cublasCreate_v2(handle) }.assert_success()
+        unsafe { cublasCreate_v2(handle) }.get_error_str()
     }
     #[cfg(feature = "disable_checks")] {
         unsafe { cublasCreate_v2(handle) };
+        None
     }
 }
 

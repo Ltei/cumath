@@ -5,34 +5,33 @@ use super::*;
 
 /// A vector slice.
 /// Holds a pointer to possibly non-continuous GPU memory.
-pub struct CuSubMatrix<'a> {
-    pub(crate) parent: PhantomData<&'a CuMatrixOp>,
+pub struct CuMatrixFragment<'a> {
+    pub(crate) _parent: PhantomData<&'a CuMatrixOp>,
     pub(crate) rows: usize,
     pub(crate) cols: usize,
     pub(crate) leading_dimension: usize,
     pub(crate) ptr: *const f32,
 }
-impl_CuMatrixOp_fragmented!(CuSubMatrix<'a>, 'a);
+impl_CuMatrixOp_fragmented!(CuMatrixFragment<'a>, 'a);
 
 
 /// A mutable vector slice.
 /// Holds a pointer to possibly non-continuous GPU memory.
-pub struct CuSubMatrixMut<'a> {
+pub struct CuMatrixFragmentMut<'a> {
     pub(crate) parent: PhantomData<&'a CuMatrixOpMut>,
     pub(crate) rows: usize,
     pub(crate) cols: usize,
     pub(crate) leading_dimension: usize,
     pub(crate) ptr: *mut f32,
 }
-impl_CuMatrixOpMut_fragmented!(CuSubMatrixMut<'a>, 'a);
+impl_CuMatrixOpMut_fragmented!(CuMatrixFragmentMut<'a>, 'a);
 
 
 
 
 #[cfg(test)]
 mod tests {
-    use super::{CuMatrix, CuMatrixOp, CuMatrixOpMut};
-    use cuda::*;
+    use super::*;
 
     #[test]
     fn getters() {

@@ -1,7 +1,7 @@
 
 #![allow(dead_code)]
 
-use ffi::cuda_ffi::*;
+use super::cuda_ffi::*;
 
 
 pub enum StructCurandGenerator {}
@@ -25,8 +25,25 @@ pub enum CurandStatus {
     InternalError = 999,
 }
 impl CurandStatus {
-    pub fn assert_success(&self) {
+    fn assert_success(&self) {
         assert_eq!(self, &CurandStatus::Success)
+    }
+    fn get_error_str(&self) -> Option<&'static str> {
+        match *self {
+            CurandStatus::Success => None,
+            CurandStatus::VersionMismatch => Some("VersionMismatch"),
+            CurandStatus::NotInitialized => Some("NotInitialized"),
+            CurandStatus::AllocationFailed => Some("AllocationFailed"),
+            CurandStatus::TypeError => Some("TypeError"),
+            CurandStatus::OutOfRand => Some("OutOfRand"),
+            CurandStatus::LengthNotMultiple => Some("LengthNotMultiple"),
+            CurandStatus::DoublePrecisionRequired => Some("DoublePrecisionRequired"),
+            CurandStatus::LaunchFailure => Some("LaunchFailure"),
+            CurandStatus::PreexistingFailure => Some("PreexistingFailure"),
+            CurandStatus::InitializationFailed => Some("InitializationFailed"),
+            CurandStatus::ArchMismatch => Some("ArchMismatch"),
+            CurandStatus::InternalError => Some("InternalError"),
+        }
     }
 }
 
@@ -59,12 +76,13 @@ extern {
 }
 
 
-pub fn curand_create_generator(generator: *mut*mut StructCurandGenerator, rng_type: CurandRngType) {
+pub fn curand_create_generator(generator: *mut*mut StructCurandGenerator, rng_type: CurandRngType) -> Option<&'static str> {
     #[cfg(not(feature = "disable_checks"))] {
-        unsafe { curandCreateGenerator(generator, rng_type) }.assert_success()
+        unsafe { curandCreateGenerator(generator, rng_type) }.get_error_str()
     }
     #[cfg(feature = "disable_checks")] {
         unsafe { curandCreateGenerator(generator, rng_type) };
+        None
     }
 }
 

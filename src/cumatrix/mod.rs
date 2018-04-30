@@ -1,25 +1,24 @@
 
+#[macro_use]
+mod macros;
+mod ffi;
+use self::ffi::*;
 
-use std::{marker::PhantomData, mem::size_of, fmt, ptr};
-
-use ffi::{cuda_ffi::*, matrixkernel_ffi::*};
-use cuda::*;
-
+use std::{self, marker::PhantomData, mem::size_of, fmt};
+use cuda_core::{cuda::*, cuda_ffi::*};
 #[cfg(not(feature = "disable_checks"))]
 use meta::assert::*;
 
 
-#[macro_use]
-mod macros;
 
 mod matrix;
 pub use self::matrix::*;
-mod matrix_slice;
-pub use self::matrix_slice::*;
-mod sub_matrix;
-pub use self::sub_matrix::*;
-mod matrix_ptr;
-pub use self::matrix_ptr::*;
+mod slice;
+pub use self::slice::*;
+mod fragment;
+pub use self::fragment::*;
+mod ptr;
+pub use self::ptr::*;
 mod math;
 pub use self::math::*;
 
@@ -56,7 +55,7 @@ pub trait CuMatrixOp: fmt::Debug {
     fn clone(&self) -> CuMatrix where Self: Sized {
         let mut output = {
             let len = self.len();
-            let mut data = ptr::null_mut();
+            let mut data = std::ptr::null_mut();
             cuda_malloc(&mut data, len*size_of::<f32>());
             CuMatrix { rows: self.rows(), cols: self.cols(), len, ptr: (data as *mut f32) }
         };
@@ -65,13 +64,13 @@ pub trait CuMatrixOp: fmt::Debug {
     }
 
     /// Returns an immutable sub-matrix.
-    fn slice<'a>(&'a self, row_offset: usize, col_offset: usize, nb_rows: usize, nb_cols: usize) -> CuSubMatrix<'a> {
+    fn slice<'a>(&'a self, row_offset: usize, col_offset: usize, nb_rows: usize, nb_cols: usize) -> CuMatrixFragment<'a> {
         #[cfg(not(feature = "disable_checks"))] {
             assert_infeq_usize(row_offset + nb_rows, "row_offset+nb_rows", self.rows(), "self.rows()");
             assert_infeq_usize(col_offset + nb_cols, "col_offset+nb_cols", self.cols(), "self.cols()");
         }
-        CuSubMatrix {
-            parent: PhantomData,
+        CuMatrixFragment {
+            _parent: PhantomData,
             rows: nb_rows,
             cols: nb_cols,
             leading_dimension: self.leading_dimension(),
@@ -114,13 +113,18 @@ pub trait CuMatrixOpMut: CuMatrixOp  {
     #[inline]
     fn as_mut_ptr(&mut self) -> *mut f32;
 
+    /// [inline]
+    /// Supertrait upcasting
+    #[inline]
+    fn as_immutable(&self) -> &CuMatrixOp;
+
     /// Returns a mutable sub-matrix.
-    fn slice_mut<'a>(&'a mut self, row_offset: usize, col_offset: usize, nb_rows: usize, nb_cols: usize) -> CuSubMatrixMut<'a> {
+    fn slice_mut<'a>(&'a mut self, row_offset: usize, col_offset: usize, nb_rows: usize, nb_cols: usize) -> CuMatrixFragmentMut<'a> {
         #[cfg(not(feature = "disable_checks"))] {
             assert_infeq_usize(row_offset + nb_rows, "row_offset+nb_rows", self.rows(), "self.rows()");
             assert_infeq_usize(col_offset + nb_cols, "col_offset+nb_cols", self.cols(), "self.cols()");
         }
-        CuSubMatrixMut {
+        CuMatrixFragmentMut {
             parent: PhantomData,
             rows: nb_rows,
             cols: nb_cols,
@@ -129,12 +133,14 @@ pub trait CuMatrixOpMut: CuMatrixOp  {
         }
     }
 
-    unsafe fn force_ownership(&mut self) -> CuMatrixPtr {
+    fn force_ownership(&mut self) -> CuMatrixPtr {
         CuMatrixPtr {
-            rows: self.rows(),
-            cols: self.cols(),
-            len: self.len(),
-            ptr: self.as_mut_ptr(),
+            deref: CuMatrixPtrDeref {
+                rows: self.rows(),
+                cols: self.cols(),
+                len: self.len(),
+                ptr: self.as_mut_ptr(),
+            }
         }
     }
 

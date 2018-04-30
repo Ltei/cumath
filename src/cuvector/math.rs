@@ -66,6 +66,14 @@ impl CuVectorMath {
         unsafe { VectorKernel_sigmoidDeriv(vector.as_ptr(), output.as_mut_ptr(), vector.len() as i32, stream.stream) }
     }
 
+    /// output[i] = tanh(vector[i])
+    pub fn tanh(vector: &CuVectorOp, output: &mut CuVectorOpMut, stream: &CudaStream) {
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(vector.len(), "vector.len()", output.len(), "output.len()");
+        }
+        unsafe { VectorKernel_tanh(vector.as_ptr(), output.as_mut_ptr(), vector.len() as i32, stream.stream) }
+    }
+
     pub fn binarize_one_max(vector: &CuVectorOp, output: &mut CuVectorOpMut, stream: &CudaStream) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(vector.len(), "vector.len()", output.len(), "output.len()");

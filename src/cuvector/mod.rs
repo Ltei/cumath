@@ -1,24 +1,25 @@
 
-use std::{marker::PhantomData, mem::size_of, fmt, ptr};
 
-use ffi::{cuda_ffi::*, vectorkernel_ffi::*};
-use cuda::*;
+#[macro_use]
+mod macros;
+pub(crate) mod ffi;
+use self::ffi::*;
 
+use std::{self, marker::PhantomData, mem::size_of, fmt};
+use cuda_core::{cuda::*, cuda_ffi::*};
 #[cfg(not(feature = "disable_checks"))]
 use meta::assert::*;
 
 
-#[macro_use]
-mod macros;
 
 mod vector;
 pub use self::vector::*;
-mod vector_slice;
-pub use self::vector_slice::*;
-mod vector_ptr;
-pub use self::vector_ptr::*;
-mod vector_slice_iter;
-pub use self::vector_slice_iter::*;
+mod slice;
+pub use self::slice::*;
+mod ptr;
+pub use self::ptr::*;
+mod slice_iter;
+pub use self::slice_iter::*;
 mod math;
 pub use self::math::*;
 
@@ -40,7 +41,7 @@ pub trait CuVectorOp: fmt::Debug {
     fn clone(&self) -> CuVector where Self: Sized {
         let mut output = {
             let len = self.len();
-            let mut data = ptr::null_mut();
+            let mut data = std::ptr::null_mut();
             cuda_malloc(&mut data, len*size_of::<f32>());
             CuVector { len, ptr: (data as *mut f32) }
         };
@@ -98,6 +99,11 @@ pub trait CuVectorOpMut: CuVectorOp {
     #[inline]
     fn as_mut_ptr(&mut self) -> *mut f32;
 
+    /// [inline]
+    /// Supertrait upcasting
+    #[inline]
+    fn as_immutable(&self) -> &CuVectorOp;
+
     /// Returns a mutable vector slice pointing to this vector's data :
     /// self[offset..offset+len]
     fn slice_mut<'a>(&'a mut self, offset: usize, len: usize) -> CuVectorSliceMut<'a> {
@@ -130,6 +136,25 @@ pub trait CuVectorOpMut: CuVectorOp {
         })
     }
 
+    /// Returns a vector mutable vector slices pointing to this vector's data,
+    /// for a slice of tuples representing the offset from the end of the last
+    /// slice (starting at 0), and the len.
+    fn slice_mutn<'a>(&'a mut self, offsets_lens: &[(usize,usize)]) -> Vec<CuVectorSliceMut<'a>> {
+        let mut offset = 0;
+        let mut slices = Vec::with_capacity(offsets_lens.len());
+        offsets_lens.iter().for_each(|&(off, len)| {
+            #[cfg(not(feature = "disable_checks"))] {
+                assert!(offset + off + len <= self.len());
+            }
+            slices.push(CuVectorSliceMut {
+                _parent: PhantomData, len,
+                ptr: unsafe { self.as_mut_ptr().offset((offset+off) as isize) }
+            });
+            offset += off + len;
+        });
+        slices
+    }
+
     /// Returns an iterator over a mutable vector, returning mutable vector slices.
     fn slice_mut_iter<'a>(&'a mut self) -> CuVectorSliceIterMut<'a> {
         CuVectorSliceIterMut {
@@ -143,10 +168,12 @@ pub trait CuVectorOpMut: CuVectorOp {
     /// - It won't free the inner GPU-pointer when it goes out of scope
     /// - It won't check if the underlying memory is still allocated when used
     /// -> Use at your own risk
-    unsafe fn force_ownership(&mut self) -> CuVectorPtr {
+    fn as_wrapped_ptr(&mut self) -> CuVectorPtr {
         CuVectorPtr {
-            len: self.len(),
-            ptr: self.as_mut_ptr(),
+            deref: CuVectorPtrDeref {
+                len: self.len(),
+                ptr: self.as_mut_ptr(),
+            }
         }
     }
 
@@ -213,6 +240,11 @@ pub trait CuVectorOpMut: CuVectorOp {
     /// Apply the sigmoid function to each element of the vector.
     fn sigmoid(&mut self, stream: &CudaStream) {
         unsafe { VectorKernel_sigmoid(self.as_ptr(), self.as_mut_ptr(), self.len() as i32, stream.stream) }
+    }
+
+    /// Apply the tanh function to each element of the vector.
+    fn tanh(&mut self, stream: &CudaStream) {
+        unsafe { VectorKernel_tanh(self.as_ptr(), self.as_mut_ptr(), self.len() as i32, stream.stream) }
     }
 
     /// self[i] = self[i] > threshold ? 1.0 : 0.0

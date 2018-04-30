@@ -1,11 +1,11 @@
 
 use std::ptr;
 
-use ffi::curand_ffi::*;
+use super::{cuda::*, curand_ffi::*};
 use ::cudata::*;
-use cuda::*;
+use ::meta::result::*;
 
-pub use ffi::curand_ffi::CurandRngType;
+pub use super::curand_ffi::CurandRngType;
 
 
 
@@ -20,10 +20,12 @@ impl Drop for CurandGenerator {
 }
 
 impl CurandGenerator {
-    pub fn new(rng_type: CurandRngType) -> CurandGenerator {
+    pub fn new(rng_type: CurandRngType) -> CumathResult<CurandGenerator> {
         let mut handle = ptr::null_mut();
-        curand_create_generator(&mut handle, rng_type);
-        CurandGenerator { handle }
+        match curand_create_generator(&mut handle, rng_type) {
+            Some(err) => Err(CumathError::new(err)),
+            None => Ok(CurandGenerator { handle }),
+        }
     }
 
     pub fn set_stream(&mut self, stream: &CudaStream) {
@@ -35,8 +37,10 @@ impl CurandGenerator {
     }
 
     pub fn generate_uniform_range(&mut self, output: &mut CuPackedDataMut, min: f32, max: f32, stream: &CudaStream) {
-        use ffi::vectorkernel_ffi::VectorKernel_aYpb;
-        assert!(min <= max);
+        use cuvector::ffi::VectorKernel_aYpb;
+        #[cfg(not(feature = "disable_checks"))] {
+            assert!(min <= max, "min > max");
+        }
         unsafe {
             curand_generate_uniform(self.handle, output.as_mut_ptr(), output.len());
             VectorKernel_aYpb(max-min, min, output.as_mut_ptr(), output.len() as i32, stream.stream);
@@ -52,7 +56,7 @@ mod tests {
 
     #[test]
     fn curand_generate_uniform() {
-        let mut generator = CurandGenerator::new(CurandRngType::PseudoDefault);
+        let mut generator = CurandGenerator::new(CurandRngType::PseudoDefault).unwrap();
 
         let mut vector = CuVector::new(10, 0.0);
         generator.generate_uniform(&mut vector);
@@ -70,7 +74,7 @@ mod tests {
         let min = -5.0;
         let max = 15.0;
 
-        let mut generator = CurandGenerator::new(CurandRngType::PseudoDefault);
+        let mut generator = CurandGenerator::new(CurandRngType::PseudoDefault).unwrap();
 
         let mut vector = CuVector::new(10, 0.0);
         generator.generate_uniform_range(&mut vector, min, max, &super::DEFAULT_STREAM);

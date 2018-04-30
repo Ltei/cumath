@@ -2,7 +2,7 @@
 use std::{ptr, mem::size_of};
 
 use super::*;
-use ffi::vectorkernel_ffi::*;
+use cuvector::ffi::*;
 
 
 
@@ -24,7 +24,18 @@ impl_CuMatrixOpMut_packed!(CuMatrix);
 
 impl CuMatrix {
 
-    /// Returns a new GPU-allocated matrix from a length and an initial value.
+    /// Returns a new zero GPU-allocated matrix from a dimension.
+    pub fn zero(rows: usize, cols: usize) -> CuMatrix {
+        let len = rows*cols;
+        let mut data = ptr::null_mut();
+        cuda_malloc(&mut data, len*size_of::<f32>());
+        unsafe { VectorKernel_init(data as *mut f32, len as i32, 0.0, DEFAULT_STREAM.stream) }
+        CuMatrix {
+            rows, cols, len,
+            ptr: data as *mut f32,
+        }
+    }
+    /// Returns a new GPU-allocated matrix from a dimension and an initial value.
     pub fn new(rows: usize, cols: usize, init_value: f32) -> CuMatrix {
         let len = rows*cols;
         let mut data = ptr::null_mut();
@@ -70,7 +81,7 @@ impl CuMatrix {
             assert_infeq_usize(col_offset + nb_cols, "col_offset+nb_cols", self.cols(), "self.cols()");
         }
         CuMatrixSliceMut {
-            parent: PhantomData,
+            _parent: PhantomData,
             rows: self.leading_dimension(),
             cols: nb_cols,
             len: self.leading_dimension()*nb_cols,
@@ -84,8 +95,8 @@ impl CuMatrix {
 
 #[cfg(test)]
 mod tests {
-    use super::{CuMatrix, CuMatrixOp, CuMatrixOpMut};
-    use cuda::*;
+    use super::*;
+
 
     #[test]
     fn getters() {

@@ -35,7 +35,7 @@ impl<'a> CuMatrixSlice<'a> {
 /// A mutable vector slice.
 /// Holds a pointer to continuous GPU memory.
 pub struct CuMatrixSliceMut<'a> {
-    pub(crate) parent: PhantomData<&'a CuMatrixOpMut>,
+    pub(crate) _parent: PhantomData<&'a CuMatrixOpMut>,
     pub(crate) rows: usize,
     pub(crate) cols: usize,
     pub(crate) len: usize,
@@ -62,7 +62,7 @@ impl <'a> CuMatrixSliceMut<'a> {
             assert_infeq_usize(col_offset + nb_cols, "col_offset+nb_cols", self.cols(), "self.cols()");
         }
         CuMatrixSliceMut {
-            parent: PhantomData,
+            _parent: PhantomData,
             rows: self.leading_dimension(),
             cols: nb_cols,
             len: self.leading_dimension()*nb_cols,

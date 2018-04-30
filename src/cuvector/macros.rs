@@ -30,11 +30,15 @@ macro_rules! impl_CuVectorOp {
                 let len = self.len;
                 let mut buffer = vec![0.0; len];
                 ::CuVectorOp::clone_to_host(self, &mut buffer);
-                write!(f, "Vector ({}) : [", len)?;
-                for i in 0..len-1 {
-                    write!(f, "{}, ", buffer[i])?;
+                if len > 0 {
+                    write!(f, "Vector ({}) [{:p}] : [", len, self.ptr)?;
+                    for i in 0..len-1 {
+                        write!(f, "{}, ", buffer[i])?;
+                    }
+                    write!(f, "{}]", buffer[len-1])
+                } else {
+                    write!(f, "Vector ({}) [{:p}] : []", len, self.ptr)
                 }
-                write!(f, "{}]", buffer[len-1])
             }
         }
     };
@@ -44,6 +48,7 @@ macro_rules! impl_CuVectorOpMut {
         impl_CuVectorOp!($name $(,$lifetimes)*);
         impl<$($lifetimes),*> ::cuvector::CuVectorOpMut for $name {
             fn as_mut_ptr(&mut self) -> *mut f32 { self.ptr }
+            fn as_immutable(&self) -> &::cuvector::CuVectorOp { self }
         }
     };
 }

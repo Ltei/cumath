@@ -1,5 +1,5 @@
 
-use ffi::cuda_ffi::*;
+use cuda_core::cuda_ffi::*;
 
 
 #[link(name = "matrixkernel")]
@@ -11,15 +11,21 @@ extern {
     pub fn MatrixKernel_add(left_op: *const f32, left_op_ld: i32, right_op: *const f32, right_op_ld: i32, output: *mut f32, output_ld: i32, rows: i32, cols: i32, stream: cudaStream_t);
 
     pub fn MatrixKernel_aYpb(a: f32, b: f32, Y: *mut f32, Y_ld: i32, rows: i32, cols: i32, stream: cudaStream_t);
+
+    pub fn MatrixKernel_convolution(input: *const f32, input_row: i32, input_cols: i32, input_ld: i32,
+                                    kernel: *const f32, kernel_rows: i32, kernel_cols: i32, kernel_ld: i32,
+                                    row_step: i32, col_step: i32, output: *mut f32, output_ld: i32, stream: cudaStream_t);
 }
 
 #[cfg(test)]
 mod tests {
     #![allow(non_snake_case)]
 
+    use super::*;
     use std::{ptr, mem::size_of};
-    use ffi::cuda_ffi::*;
-    use meta::assert::*;
+    use ::cuda_core::{cuda::*};
+    use ::cumatrix::*;
+    use ::meta::assert::*;
 
     #[test]
     fn MatrixKernel_init() {
@@ -69,28 +75,29 @@ mod tests {
 
         buffer.iter().for_each(|x| { assert_equals_float(*x, a*matrix_value+b) });
     }
-}
-
-
-/*
-#[cfg(test)]
-mod tests {
-    use cumatrix::*;
-
-    fn assert_equals_float(a: f32, b: f32) {
-        let d = a - b;
-        if d < -0.000001 || d > 0.000001 {
-            panic!("{} != {}", a, b);
-        }
-    }
 
     #[test]
-    #[allow(non_snake_case)]
-    fn MatrixKernel_init() {
-        let matrix = CuMatrix::new(3, 3, 0.0);
-        unsafe { super::MatrixKernel_init(matrix.data, 3, 3, 3, 5.0) }
-        let mut buffer = [0.0; 9];
-        matrix.clone_to_host(&mut buffer);
-        buffer.iter().for_each(|x| { assert_equals_float(*x, 5.0) })
+    fn convolution() {
+
+        let input = ::CuMatrix::from_data(3, 3, &[0.0, 1.0, 2.0, 1.0, 0.0, 1.0, 2.0, 1.0, -2.0]);
+        let kernel = ::CuMatrix::from_data(2, 1, &[-1.0, 1.0]);
+        let mut output = ::CuMatrix::new(2, 3, 0.0);
+        unsafe { super::MatrixKernel_convolution(input.as_ptr(), input.rows() as i32,
+                                               input.cols() as i32, input.leading_dimension() as i32,
+                                               kernel.as_ptr(), kernel.rows() as i32,
+                                               kernel.cols() as i32, kernel.leading_dimension() as i32,
+                                               1, 1, output.as_mut_ptr(),
+                                               output.leading_dimension() as i32, DEFAULT_STREAM.stream) }
+
+        let mut buffer = vec![0.0; 9];
+        output.clone_to_host(&mut buffer);
+
+        assert_equals_float(buffer[0], 1.0);
+        assert_equals_float(buffer[1], 1.0);
+        assert_equals_float(buffer[2], -1.0);
+        assert_equals_float(buffer[3], 1.0);
+        assert_equals_float(buffer[4], -1.0);
+        assert_equals_float(buffer[5], -3.0);
+
     }
-}*/
+}

@@ -46,6 +46,14 @@ __global__ void kernel_sigmoidDeriv(float* vector, float* output, int len) {
       output[tid] = - 0.5 / (tmp2*tmp2);
     }
 }
+__global__ void kernel_tanh(float* vector, float* output, int len) {
+    float tmp;
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid < len) {
+      tmp = vector[tid];
+      output[tid] = tmp / (1.0 + (tmp < 0.0 ? -tmp : tmp));
+    }
+}
 
 __global__ void kernel_binarize(float* vector, float threshold, float* output, int len) {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -186,6 +194,15 @@ extern "C" {
         gridDim.x = (len + blockDim.x - 1) / blockDim.x;
 
         kernel_sigmoidDeriv <<<gridDim, blockDim, 0, stream>>> (vector, output, len);
+    }
+    void VectorKernel_tanh(float* vector, float* output, int len, cudaStream_t stream) {
+       dim3 gridDim;
+       dim3 blockDim;
+
+       blockDim.x = 1024;
+       gridDim.x = (len + blockDim.x - 1) / blockDim.x;
+
+      kernel_tanh <<<gridDim, blockDim, 0, stream>>> (vector, output, len);
     }
 
     void VectorKernel_binarize(float* vector, float threshold, float* output, int len, cudaStream_t stream) {

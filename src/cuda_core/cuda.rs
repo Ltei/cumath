@@ -1,10 +1,12 @@
 
 use std::ptr;
 
-use ffi::cuda_ffi::*;
-//use std::process::Command;
+use super::cuda_ffi::*;
+
+
 
 pub const DEFAULT_STREAM : CudaStream = CudaStream { stream: ptr::null_mut() };
+
 
 
 pub struct Cuda {}
@@ -12,21 +14,10 @@ impl Cuda {
     pub fn synchronize() {
         cuda_device_synchronize();
     }
-
-    /*pub fn create_kernel(params: &str, core: &str) {
-        let kernel_str =  Self::get_kernel_str(params, core);
-
-        let nvcc_exit_status = Command::new("nvcc -ccbin clang-3.8")
-            .output().expect("Could not process nvcc command");
-        if nvcc_exit_status != 0 { panic!("Could not compile cuda kernel") }
-    }
-    fn get_kernel_str(params: &str, core: &str) -> String {
-        String::with_capacity(1024).add("extern \"C\" __global__ void kernel(").add(params).add(") {").add(core).push('}')
-    }*/
 }
 
 
-#[derive(Eq, PartialEq, Debug)]
+
 pub struct CudaStream {
     pub(crate) stream: cudaStream_t,
 }

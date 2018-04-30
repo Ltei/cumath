@@ -1,5 +1,5 @@
 
-use ffi::cuda_ffi::*;
+use cuda_core::cuda_ffi::*;
 
 
 #[link(name = "vectorkernel")]
@@ -14,6 +14,8 @@ extern {
     pub fn VectorKernel_psquare(vector: *const f32, output: *mut f32, len: i32, stream: cudaStream_t);
     pub fn VectorKernel_sigmoid(vector: *const f32, output: *mut f32, len: i32, stream: cudaStream_t);
     pub fn VectorKernel_sigmoidDeriv(vector: *const f32, output: *mut f32, len: i32, stream: cudaStream_t);
+    pub fn VectorKernel_tanh(vector: *const f32, output: *mut f32, len: i32, stream: cudaStream_t);
+
 
     pub fn VectorKernel_binarize(vector: *const f32, threshold: f32, output: *mut f32, len: i32, stream: cudaStream_t);
     pub fn VectorKernel_binarizeOneMax(vector: *const f32, output: *mut f32, len: i32, stream: cudaStream_t);
@@ -32,9 +34,9 @@ extern {
 mod tests {
     #![allow(non_snake_case)]
 
+    use super::*;
     use std::{ptr, mem::size_of};
-    use ffi::cuda_ffi::*;
-    use cuda::*;
+    use ::cuda_core::{cuda::*};
     use meta::assert::*;
 
     #[test]

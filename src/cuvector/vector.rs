@@ -20,6 +20,13 @@ impl_CuVectorOpMut!(CuVector);
 
 impl CuVector {
 
+    /// Returns a new zero GPU-allocated vector from a length.
+    pub fn zero(len: usize) -> CuVector {
+        let mut data = ptr::null_mut();
+        cuda_malloc(&mut data, len*size_of::<f32>());
+        unsafe { VectorKernel_init(data as *mut f32, len as i32, 0.0, DEFAULT_STREAM.stream) }
+        CuVector { len, ptr: (data as *mut f32) }
+    }
     /// Returns a new GPU-allocated vector from a length and an initial value.
     pub fn new(len: usize, init_value: f32) -> CuVector {
         let mut data = ptr::null_mut();
@@ -27,7 +34,6 @@ impl CuVector {
         unsafe { VectorKernel_init(data as *mut f32, len as i32, init_value, DEFAULT_STREAM.stream) }
         CuVector { len, ptr: (data as *mut f32) }
     }
-
     /// Returns a new GPU-allocated copy of 'data'.
     pub fn from_data(data: &[f32]) -> CuVector {
         let mut output = {

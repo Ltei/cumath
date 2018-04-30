@@ -2,12 +2,13 @@
 
 use std::ptr;
 
-use super::*;
-use ffi::cublas_ffi::*;
+use super::{cuda::*, cublas_ffi::*};
 use ::cudata::{CuPackedData, CuPackedDataMut};
-
+use ::cuvector::*;
+use ::cumatrix::*;
+use ::meta::result::*;
 #[cfg(not(feature = "disable_checks"))]
-use meta::assert::*;
+use ::meta::assert::*;
 
 
 
@@ -22,10 +23,12 @@ impl Drop for Cublas {
 impl Cublas {
 
     /// Returns a new instance of Cublas.
-    pub fn new() -> Cublas {
+    pub fn new() -> CumathResult<Cublas> {
         let mut handle = ptr::null_mut();
-        cublas_create(&mut handle);
-        Cublas { handle }
+        match cublas_create(&mut handle) {
+            Some(err) => Err(CumathError::new(err)),
+            None => Ok(Cublas { handle }),
+        }
     }
 
     /// Sets the cuda stream used by this instance of Cublas.
@@ -131,7 +134,7 @@ mod tests {
     fn abs_sum() {
         let input_data = vec![-1.0, 2.0, 1.0, -2.0, 7.0, 5.5, -3.7, 1.1, 0.7];
 
-        let cublas = Cublas::new();
+        let cublas = Cublas::new().unwrap();
         let vector = CuVector::from_data(input_data.as_slice());
         let asum = cublas.asum(&vector);
 
@@ -142,7 +145,7 @@ mod tests {
     fn mult_m_m() {
         let input_data = vec![-1.0, 2.0, 1.0, -2.0, 7.0, 5.5];
 
-        let cublas = Cublas::new();
+        let cublas = Cublas::new().unwrap();
         let matrix1 = CuMatrix::from_data(2, 3, input_data.as_slice());
         let matrix2 = CuMatrix::from_data(3, 2, input_data.as_slice());
         let mut output = CuMatrix::new(2, 2, 0.0);
@@ -163,7 +166,7 @@ mod tests {
         let col_vector_data = vec![1.0, -2.0, 3.0];
         let matrix_data = vec![-1.5, 2.0, 1.5, -0.5, 1.0, 3.5];
 
-        let cublas = Cublas::new();
+        let cublas = Cublas::new().unwrap();
         let col_vector = CuVector::from_data(col_vector_data.as_slice());
         let matrix = CuMatrix::from_data(2, 3, matrix_data.as_slice());
         let mut output = CuVector::new(2, 0.0);
@@ -182,7 +185,7 @@ mod tests {
         let vector_data = vec![2.2, -3.2, 1.1];
         let matrix_data = vec![-1.0, 2.0, 1.0, -2.0, 7.0, 5.5];
 
-        let cublas = Cublas::new();
+        let cublas = Cublas::new().unwrap();
         let vector = CuVector::from_data(vector_data.as_slice());
         let matrix = CuMatrix::from_data(3, 2, matrix_data.as_slice());
         let mut output = CuVector::new(2, 0.0);
@@ -201,7 +204,7 @@ mod tests {
         let col_vector_data = vec![2.2, -3.2, 1.1];
         let row_vector_data = vec![-1.0, 2.0];
 
-        let cublas = Cublas::new();
+        let cublas = Cublas::new().unwrap();
         let col_vector = CuVector::from_data(col_vector_data.as_slice());
         let row_vector = CuVector::from_data(row_vector_data.as_slice());
         let mut output = CuMatrix::new(3, 2, 0.0);
