@@ -6,7 +6,7 @@ Cuda-based matrix/vector computations
 
 Install nvcc before using this library
 
-/!\ If you have issues with the version of your C compiler, you can try to uncomment this line in build.rs : "std::env::set_var("CXX", get_ccbin().unwrap());"
+/!\ The detection of cuda compatible c compiler is very basic and only works for linux, if it doesn't work for you, you can try to comment this line in build.rs : "std::env::set_var("CXX", get_ccbin().unwrap());"
 
 
 ## Implemented :
