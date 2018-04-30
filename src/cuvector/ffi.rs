@@ -26,6 +26,7 @@ extern {
     pub fn VectorKernel_aYpb(a: f32, b: f32, Y: *mut f32, len: i32, stream: cudaStream_t);
     pub fn VectorKernel_aXpb_Y(a: f32, X: *const f32, b: f32, Y: *mut f32, len: i32, stream: cudaStream_t);
     pub fn VectorKernel_XVpY(X: *const f32, V: *const f32, Y: *mut f32, len: i32, stream: cudaStream_t);
+    pub fn VectorKernel_X_aVpb_Y(X: *const f32, a: f32, V: *const f32, b: f32, Y: *mut f32, len: i32, stream: cudaStream_t);
 }
 
 
@@ -315,5 +316,36 @@ mod tests {
         cuda_free(operator2);
 
         buffer.iter().for_each(|x| { assert_equals_float(*x, operator1_value*operator2_value+vector_value) });
+    }
+    #[test]
+    fn VectorKernel_X_aVpb_Y() {
+        let len = 10;
+        let vector_value = 1.0;
+        let operator1_value = 5.0;
+        let operator2_value = 5.0;
+        let a = 2.0;
+        let b = 3.0;
+        let mut buffer = vec![0.0; len];
+
+        let mut vector = ptr::null_mut();
+        cuda_malloc(&mut vector, len*size_of::<f32>());
+        unsafe { super::VectorKernel_init(vector as *mut f32, len as i32, vector_value, DEFAULT_STREAM.stream) }
+
+        let mut operator1 = ptr::null_mut();
+        cuda_malloc(&mut operator1, len*size_of::<f32>());
+        unsafe { super::VectorKernel_init(operator1 as *mut f32, len as i32, operator1_value, DEFAULT_STREAM.stream) }
+
+        let mut operator2 = ptr::null_mut();
+        cuda_malloc(&mut operator2, len*size_of::<f32>());
+        unsafe { super::VectorKernel_init(operator2 as *mut f32, len as i32, operator2_value, DEFAULT_STREAM.stream) }
+
+        unsafe { super::VectorKernel_X_aVpb_Y(operator1 as *mut f32, a, operator2 as *mut f32, b, vector as *mut f32, len as i32, DEFAULT_STREAM.stream) }
+
+        cuda_memcpy(buffer.as_mut_ptr(), vector, len*size_of::<f32>(), cudaMemcpyKind::DeviceToHost);
+        cuda_free(vector);
+        cuda_free(operator1);
+        cuda_free(operator2);
+
+        buffer.iter().for_each(|x| { assert_equals_float(*x, operator1_value*(a*operator2_value+b)+vector_value) });
     }
 }

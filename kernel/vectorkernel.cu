@@ -111,6 +111,12 @@ __global__ void kernel_XVpY(float* X, float* V, float* Y, int len) {
         Y[tid] += X[tid] * V[tid];
     }
 }
+__global__ void kernel_X_aVpb_pY(float* X, float a, float* V, float b, float* Y, int len) {
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid < len) {
+        Y[tid] += X[tid] * (a*V[tid]+b);
+    }
+}
 
 extern "C" {
     void VectorKernel_init(float* vector, int len, float value, cudaStream_t stream) {
@@ -253,5 +259,14 @@ extern "C" {
         gridDim.x = (len + blockDim.x - 1) / blockDim.x;
 
         kernel_XVpY <<<gridDim, blockDim, 0, stream>>> (X, V, Y, len);
+    }
+    void VectorKernel_X_aVpb_Y(float* X, float a, float* V, float b, float* Y, int len, cudaStream_t stream) {
+        dim3 gridDim;
+        dim3 blockDim;
+
+        blockDim.x = 1024;
+        gridDim.x = (len + blockDim.x - 1) / blockDim.x;
+
+        kernel_X_aVpb_pY <<<gridDim, blockDim, 0, stream>>> (X, a, V, b, Y, len);
     }
 }

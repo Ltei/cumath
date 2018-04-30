@@ -9,30 +9,37 @@ pub struct CuMatrixPtr {
 impl CuMatrixPtr {
 
     /// [inline]
-    /// Returns the number of rows of the underlying vector (even if the pointed memory has been freed)
+    /// Returns the number of rows of the underlying matrix (even if the pointed memory has been freed)
     #[inline]
     pub fn rows(&self) -> usize {
         self.deref.rows
     }
 
     /// [inline]
-    /// Returns the number of columns of the underlying vector (even if the pointed memory has been freed)
+    /// Returns the number of columns of the underlying matrix (even if the pointed memory has been freed)
     #[inline]
     pub fn cols(&self) -> usize {
         self.deref.cols
     }
 
     /// [inline]
-    /// Returns the length of the underlying vector (even if the pointed memory has been freed)
+    /// Returns the length of the underlying matrix (even if the pointed memory has been freed)
     #[inline]
     pub fn len(&self) -> usize {
         self.deref.len
     }
 
     /// [inline]
-    /// Returns the underlying vector
+    /// Returns an immutable reference to the underlying matrix
     #[inline]
-    pub unsafe fn deref(&mut self) -> &mut CuMatrixPtrDeref {
+    pub unsafe fn deref(&self) -> &CuMatrixPtrDeref {
+        &self.deref
+    }
+
+    /// [inline]
+    /// Returns an mutable reference to the underlying matrix
+    #[inline]
+    pub unsafe fn deref_mut(&mut self) -> &mut CuMatrixPtrDeref {
         &mut self.deref
     }
 

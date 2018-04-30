@@ -133,7 +133,11 @@ pub trait CuMatrixOpMut: CuMatrixOp  {
         }
     }
 
-    fn force_ownership(&mut self) -> CuMatrixPtr {
+    /// Returns a pointer over a matrix :
+    /// - It won't free the inner GPU-pointer when it goes out of scope
+    /// - It won't check if the underlying memory is still allocated when used
+    /// -> Use at your own risk
+    fn as_wrapped_ptr(&mut self) -> CuMatrixPtr {
         CuMatrixPtr {
             deref: CuMatrixPtrDeref {
                 rows: self.rows(),

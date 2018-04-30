@@ -18,9 +18,16 @@ impl CuVectorPtr {
     }
 
     /// [inline]
-    /// Returns the underlying vector
+    /// Returns an immutable reference to the underlying vector
     #[inline]
-    pub unsafe fn deref(&mut self) -> &mut CuVectorPtrDeref {
+    pub unsafe fn deref(&self) -> &CuVectorPtrDeref {
+        &self.deref
+    }
+
+    /// [inline]
+    /// Returns an mutable reference to the underlying vector
+    #[inline]
+    pub unsafe fn deref_mut(&mut self) -> &mut CuVectorPtrDeref {
         &mut self.deref
     }
 

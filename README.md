@@ -100,7 +100,7 @@ fn assert_equals_float(a: f32, b: f32) {
 
 fn main() {
     // Create an instance of CuBLAS
-    let cublas = Cublas::new();
+    let cublas = Cublas::new().unwrap();
 
     // Create a 2*2 Matrix containing [2.0, -1.0, 0.0, 1.0] (matrices are row-ordered)
     let matrix1 = CuMatrix::from_data(2, 2, &[1.0, 2.0, -2.0, 4.0]);

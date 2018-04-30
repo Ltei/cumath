@@ -103,5 +103,14 @@ impl CuVectorMath {
         unsafe { VectorKernel_XVpY(x.as_ptr(), v.as_ptr(), y.as_mut_ptr(), x.len() as i32, stream.stream) }
     }
 
+    /// y[i] += x[i] * (a*v[i]+b)
+    pub fn x_avpb_y(x: &CuVectorOp, a: f32, v: &CuVectorOp, b: f32, y: &mut CuVectorOpMut, stream: &CudaStream) {
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(x.len(), "x.len()", v.len(), "v.len()");
+            assert_eq_usize(x.len(), "x.len()", y.len(), "y.len()");
+        }
+        unsafe { VectorKernel_X_aVpb_Y(x.as_ptr(), a, v.as_ptr(), b, y.as_mut_ptr(), x.len() as i32, stream.stream) }
+    }
+
 
 }
