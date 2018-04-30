@@ -263,25 +263,3 @@ pub trait CuVectorOpMut: CuVectorOp {
     }
 
 }
-
-
-
-#[cfg(test)]
-mod tests {
-
-    use super::*;
-    use meta::codec::Codec;
-
-    #[test]
-    fn codec() {
-        let data = [1.2, -2.2656146, 7.12, 2.0, 4.5];
-        CuVector::decode(&CuVector::from_data(&data).encode()).dev_assert_equals(&data);
-    }
-
-    #[test]
-    fn test() {
-        let mut vector = CuVector::new(2, 0.0);
-        vector.add_value(-1.2, &DEFAULT_STREAM);
-    }
-
-}

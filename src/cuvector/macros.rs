@@ -13,9 +13,9 @@ macro_rules! impl_CuVectorOp {
                 if len > 0 {
                     write!(f, "Vector ({}) [{:p}] : [", len, self.ptr)?;
                     for i in 0..len-1 {
-                        write!(f, "{}, ", buffer[i])?;
+                        write!(f, "{:.25}, ", buffer[i])?;
                     }
-                    write!(f, "{}]", buffer[len-1])
+                    write!(f, "{:.25}]", buffer[len-1])
                 } else {
                     write!(f, "Vector ({}) [{:p}] : []", len, self.ptr)
                 }

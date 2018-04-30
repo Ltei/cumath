@@ -217,20 +217,3 @@ pub trait CuMatrixOpMut: CuMatrixOp  {
     }
 
 }
-
-
-
-
-#[cfg(test)]
-mod tests {
-
-    use super::*;
-    use meta::codec::Codec;
-
-    #[test]
-    fn codec() {
-        let data = [1.2, -2.2656146, 7.12, 2.0, 4.5, 7.256];
-        CuMatrix::decode(&CuMatrix::from_data(2, 3, &data).encode()).dev_assert_equals(&data);
-    }
-
-}

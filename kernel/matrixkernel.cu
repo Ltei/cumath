@@ -47,7 +47,7 @@ __global__ void kernel_convolution(float* input, int inputRows, int inputCols, i
 
     if (row <= inputRows - kernelRows && col <= inputCols - kernelCols) {
         int i, j;
-        output[row+col*inputLd] = 0;
+        output[row+col*outputLd] = 0;
         for (i=0; i<kernelRows; i++) {
             for (j=0; j<kernelCols; j++) {
                 output[row+col*outputLd] += kernel[i+j*kernelLd] * input[(row+i)+(col+j)*inputLd];

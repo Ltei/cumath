@@ -78,7 +78,6 @@ mod tests {
 
     #[test]
     fn convolution() {
-
         let input = ::CuMatrix::from_data(3, 3, &[0.0, 1.0, 2.0, 1.0, 0.0, 1.0, 2.0, 1.0, -2.0]);
         let kernel = ::CuMatrix::from_data(2, 1, &[-1.0, 1.0]);
         let mut output = ::CuMatrix::new(2, 3, 0.0);
@@ -88,7 +87,6 @@ mod tests {
                                                kernel.cols() as i32, kernel.leading_dimension() as i32,
                                                1, 1, output.as_mut_ptr(),
                                                output.leading_dimension() as i32, DEFAULT_STREAM.stream) }
-
         let mut buffer = vec![0.0; 9];
         output.clone_to_host(&mut buffer);
 
@@ -98,6 +96,5 @@ mod tests {
         assert_equals_float(buffer[3], 1.0);
         assert_equals_float(buffer[4], -1.0);
         assert_equals_float(buffer[5], -3.0);
-
     }
 }
