@@ -1,11 +1,12 @@
 
 
 mod cuda_core;
-mod meta;
 
 pub use cuda_core::cuda::*;
 pub use cuda_core::cublas::*;
 pub use cuda_core::curand::*;
+
+mod meta;
 
 #[macro_use]
 pub mod cudata;

@@ -5,26 +5,6 @@ macro_rules! impl_CuVectorOp {
             fn as_ptr(&self) -> *const f32 { self.ptr }
         }
 
-        impl<$($lifetimes),*> ::meta::codec::Codec for $name {
-            type OutputType = ::cuvector::CuVector;
-
-            fn encode(&self) -> String {
-                let mut host_data = vec![0.0; self.len];
-                ::CuVectorOp::clone_to_host(self, &mut host_data);
-
-                host_data.iter().map(|x| {
-                    format!("{} ", x)
-                }).collect::<String>()
-            }
-            fn decode(data: &str) -> ::cuvector::CuVector {
-                ::cuvector::CuVector::from_data(
-                    data.split_whitespace().map(|x| {
-                        x.parse::<f32>().unwrap_or_else(|err| { panic!("{}", err) })
-                    }).collect::<Vec<f32>>().as_slice()
-                )
-            }
-        }
-
         impl<$($lifetimes),*> ::std::fmt::Debug for $name {
             fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
                 let len = self.len;

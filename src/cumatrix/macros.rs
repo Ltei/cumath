@@ -10,31 +10,6 @@ macro_rules! impl_CuMatrixOp_fragmented {
             fn as_ptr(&self) -> *const f32 { self.ptr }
         }
 
-        impl<$($lifetimes),*> ::meta::codec::Codec for $name {
-            type OutputType = ::cumatrix::CuMatrix;
-
-            fn encode(&self) -> String {
-                let mut host_data = vec![0.0; self.rows * self.cols];
-                ::cumatrix::CuMatrixOp::clone_to_host(self, host_data.as_mut_slice());
-
-                let mut output = format!("{} {} ", self.rows, self.cols);
-                host_data.iter().for_each(|x| {
-                    output.push_str(&format!("{} ", x))
-                });
-                output
-            }
-            fn decode(data: &str) -> ::cumatrix::CuMatrix {
-                let mut split = data.split_whitespace();
-                let rows = split.next().unwrap().parse::<usize>().unwrap();
-                let cols = split.next().unwrap().parse::<usize>().unwrap();
-                ::cumatrix::CuMatrix::from_data(rows, cols,
-                    split.map(|x| {
-                        x.parse::<f32>().unwrap_or_else(|err| { panic!("{}", err) })
-                    }).collect::<Vec<f32>>().as_slice()
-                )
-            }
-        }
-
         impl<$($lifetimes),*> ::std::fmt::Debug for $name {
             fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
                 let len = self.rows * self.cols;
@@ -76,31 +51,6 @@ macro_rules! impl_CuMatrixOp_packed {
 
             fn clone_to_host(&self, output: &mut [f32]) {
                 ::cuda_core::cuda_ffi::cuda_memcpy(output.as_mut_ptr(), self.ptr, self.len * $crate::std::mem::size_of::<f32>(), ::cuda_core::cuda_ffi::cudaMemcpyKind::DeviceToHost);
-            }
-        }
-
-        impl<$($lifetimes),*> ::meta::codec::Codec for $name {
-            type OutputType = ::cumatrix::CuMatrix;
-
-            fn encode(&self) -> String {
-                let mut host_data = vec![0.0; self.len];
-                ::cumatrix::CuMatrixOp::clone_to_host(self, host_data.as_mut_slice());
-
-                let mut output = format!("{} {} ", self.rows, self.cols);
-                host_data.iter().for_each(|x| {
-                    output.push_str(&format!("{} ", x))
-                });
-                output
-            }
-            fn decode(data: &str) -> ::cumatrix::CuMatrix {
-                let mut split = data.split_whitespace();
-                let rows = split.next().unwrap().parse::<usize>().unwrap();
-                let cols = split.next().unwrap().parse::<usize>().unwrap();
-                ::cumatrix::CuMatrix::from_data(rows, cols,
-                    split.map(|x| {
-                        x.parse::<f32>().unwrap_or_else(|err| { panic!("{}", err) })
-                    }).collect::<Vec<f32>>().as_slice()
-                )
             }
         }
 
