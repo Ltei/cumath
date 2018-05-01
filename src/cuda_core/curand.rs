@@ -41,10 +41,31 @@ impl CurandGenerator {
         #[cfg(not(feature = "disable_checks"))] {
             assert!(min <= max, "min > max");
         }
-        unsafe {
             curand_generate_uniform(self.handle, output.as_mut_ptr(), output.len());
+        unsafe {
             VectorKernel_aYpb(max-min, min, output.as_mut_ptr(), output.len() as i32, stream.stream);
         }
+    }
+
+    pub fn generate_normal(&mut self, output: &mut CuPackedDataMut, mean: f32, stddev: f32) {
+        #[cfg(not(feature = "disable_checks"))] {
+            assert!(stddev >= 0.0, "stddev < 0.0");
+        }
+        curand_generate_normal(self.handle, output.as_mut_ptr(), output.len(), mean, stddev);
+    }
+
+    pub fn generate_lognormal(&mut self, output: &mut CuPackedDataMut, mean: f32, stddev: f32) {
+        #[cfg(not(feature = "disable_checks"))] {
+            assert!(stddev >= 0.0, "stddev < 0.0");
+        }
+        curand_generate_lognormal(self.handle, output.as_mut_ptr(), output.len(), mean, stddev);
+    }
+
+    pub fn generate_poisson(&mut self, output: &mut CuPackedDataMut, lambda: f32) {
+        #[cfg(not(feature = "disable_checks"))] {
+            assert!(lambda >= 0.0, "lambda < 0.0");
+        }
+        curand_generate_poisson(self.handle, output.as_mut_ptr(), output.len(), lambda);
     }
 }
 
@@ -86,128 +107,5 @@ mod tests {
             assert!(*x >= min && *x <= max);
         });
     }
-
-
-    /*
-    #[test]
-    fn benchmark_stream() {
-        use std::time::Instant;
-
-        let mut generator1 = CurandGenerator::new(CurandRngType::PseudoDefault);
-        let mut generator2 = CurandGenerator::new(CurandRngType::PseudoDefault);
-
-        let mut vector1 = CuVector::new(10000, 1.0);
-        let mut vector2 = CuVector::new(10000, 1.0);
-
-        let stream1 = CudaStream::new();
-        let stream2 = CudaStream::new();
-
-        let t0 = Instant::now();
-        generator1.set_stream(&stream1);
-        for _ in 0..1000000 {
-            generator1.generate_uniform(&mut vector1);
-        }
-        stream1.synchronize();
-        let dt = t0.elapsed();
-        println!("1 finished in {}.{}", dt.as_secs(), dt.subsec_nanos());
-
-        /*let t0 = Instant::now();
-        for _ in 0..500000 {
-            generator1.set_stream(&stream1);
-            generator1.generate_uniform(&mut vector1);
-            generator1.set_stream(&stream2);
-            generator1.generate_uniform(&mut vector2);
-        }
-        stream1.synchronize();
-        stream2.synchronize();
-        let dt = t0.elapsed();
-        println!("2 finished in {}.{}", dt.as_secs(), dt.subsec_nanos());*/
-
-        let t0 = Instant::now();
-        generator1.set_stream(&stream1);
-        generator2.set_stream(&stream2);
-        for _ in 0..500000 {
-            generator1.generate_uniform(&mut vector1);
-            generator2.generate_uniform(&mut vector2);
-        }
-        stream1.synchronize();
-        stream2.synchronize();
-        let dt = t0.elapsed();
-        println!("3 finished in {}.{}", dt.as_secs(), dt.subsec_nanos());
-
-        let t0 = Instant::now();
-        generator1.set_stream(&stream1);
-        for _ in 0..1000000 {
-            generator1.generate_uniform(&mut vector1);
-        }
-        stream1.synchronize();
-        let dt = t0.elapsed();
-        println!("1 finished in {}.{}", dt.as_secs(), dt.subsec_nanos());
-
-        /*let t0 = Instant::now();
-        for _ in 0..500000 {
-            generator1.set_stream(&stream1);
-            generator1.generate_uniform(&mut vector1);
-            generator1.set_stream(&stream2);
-            generator1.generate_uniform(&mut vector2);
-        }
-        stream1.synchronize();
-        stream2.synchronize();
-        let dt = t0.elapsed();
-        println!("2 finished in {}.{}", dt.as_secs(), dt.subsec_nanos());*/
-
-        let t0 = Instant::now();
-        generator1.set_stream(&stream1);
-        generator2.set_stream(&stream2);
-        for _ in 0..500000 {
-            generator1.generate_uniform(&mut vector1);
-            generator2.generate_uniform(&mut vector2);
-        }
-        stream1.synchronize();
-        stream2.synchronize();
-        let dt = t0.elapsed();
-        println!("3 finished in {}.{}", dt.as_secs(), dt.subsec_nanos());
-
-        let t0 = Instant::now();
-        generator1.set_stream(&stream1);
-        for _ in 0..1800000 {
-            generator1.generate_uniform(&mut vector1);
-        }
-        stream1.synchronize();
-        let dt = t0.elapsed();
-        println!("12 finished in {}.{}", dt.as_secs(), dt.subsec_nanos());
-
-        /*let t0 = Instant::now();
-        for _ in 0..500000 {
-            generator1.set_stream(&stream1);
-            generator1.generate_uniform(&mut vector1);
-            generator1.set_stream(&stream2);
-            generator1.generate_uniform(&mut vector2);
-        }
-        stream1.synchronize();
-        stream2.synchronize();
-        let dt = t0.elapsed();
-        println!("2 finished in {}.{}", dt.as_secs(), dt.subsec_nanos());*/
-
-        let mut vector3 = CuVector::new(10000, 1.0);
-        let mut generator3 = CurandGenerator::new(CurandRngType::PseudoDefault);
-        let stream3 = CudaStream::new();
-
-        let t0 = Instant::now();
-        generator1.set_stream(&stream1);
-        generator2.set_stream(&stream2);
-        generator3.set_stream(&stream3);
-        for _ in 0..600000 {
-            generator1.generate_uniform(&mut vector1);
-            generator2.generate_uniform(&mut vector2);
-            generator3.generate_uniform(&mut vector3);
-        }
-        stream1.synchronize();
-        stream2.synchronize();
-        let dt = t0.elapsed();
-        println!("32 finished in {}.{}", dt.as_secs(), dt.subsec_nanos());
-    }
-    */
-
 
 }

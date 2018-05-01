@@ -71,6 +71,9 @@ extern {
     fn curandDestroyGenerator(generator: *mut StructCurandGenerator) -> CurandStatus;
 
     fn curandGenerateUniform(generator: *mut StructCurandGenerator, outputPtr: *mut f32, num: usize) -> CurandStatus;
+    fn curandGenerateNormal(generator: *mut StructCurandGenerator, outputPtr: *mut f32, num: usize, mean: f32, stddev: f32) -> CurandStatus;
+    fn curandGenerateLogNormal(generator: *mut StructCurandGenerator, outputPtr: *mut f32, num: usize, mean: f32, stddev: f32) -> CurandStatus;
+    fn curandGeneratePoisson(generator: *mut StructCurandGenerator, outputPtr: *mut f32, num: usize, lambda: f32) -> CurandStatus;
 
     fn curandSetStream(generator: *mut StructCurandGenerator, stream: cudaStream_t) -> CurandStatus;
 }
@@ -101,6 +104,33 @@ pub fn curand_generate_uniform(generator: *mut StructCurandGenerator, output_ptr
     }
     #[cfg(feature = "disable_checks")] {
         unsafe { curandGenerateUniform(generator, output_ptr, num) };
+    }
+}
+
+pub fn curand_generate_normal(generator: *mut StructCurandGenerator, output_ptr: *mut f32, num: usize, mean: f32, stddev: f32) {
+    #[cfg(not(feature = "disable_checks"))] {
+        unsafe { curandGenerateNormal(generator, output_ptr, num, mean, stddev) }.assert_success()
+    }
+    #[cfg(feature = "disable_checks")] {
+        unsafe { curandGenerateNormal(generator, output_ptr, num, mean, stddev) };
+    }
+}
+
+pub fn curand_generate_lognormal(generator: *mut StructCurandGenerator, output_ptr: *mut f32, num: usize, mean: f32, stddev: f32) {
+    #[cfg(not(feature = "disable_checks"))] {
+        unsafe { curandGenerateLogNormal(generator, output_ptr, num, mean, stddev) }.assert_success()
+    }
+    #[cfg(feature = "disable_checks")] {
+        unsafe { curandGenerateLogNormal(generator, output_ptr, num, mean, stddev) };
+    }
+}
+
+pub fn curand_generate_poisson(generator: *mut StructCurandGenerator, output_ptr: *mut f32, num: usize, lambda: f32) {
+    #[cfg(not(feature = "disable_checks"))] {
+        unsafe { curandGeneratePoisson(generator, output_ptr, num, lambda) }.assert_success()
+    }
+    #[cfg(feature = "disable_checks")] {
+        unsafe { curandGeneratePoisson(generator, output_ptr, num, lambda) };
     }
 }
 
