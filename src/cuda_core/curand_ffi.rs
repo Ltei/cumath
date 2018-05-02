@@ -79,6 +79,7 @@ extern {
 }
 
 
+#[inline]
 pub fn curand_create_generator(generator: *mut*mut StructCurandGenerator, rng_type: CurandRngType) -> Option<&'static str> {
     #[cfg(not(feature = "disable_checks"))] {
         unsafe { curandCreateGenerator(generator, rng_type) }.get_error_str()
@@ -89,6 +90,7 @@ pub fn curand_create_generator(generator: *mut*mut StructCurandGenerator, rng_ty
     }
 }
 
+#[inline]
 pub fn curand_destroy_generator(generator: *mut StructCurandGenerator) {
     #[cfg(not(feature = "disable_checks"))] {
         unsafe { curandDestroyGenerator(generator) }.assert_success()
@@ -98,6 +100,7 @@ pub fn curand_destroy_generator(generator: *mut StructCurandGenerator) {
     }
 }
 
+#[inline]
 pub fn curand_generate_uniform(generator: *mut StructCurandGenerator, output_ptr: *mut f32, num: usize) {
     #[cfg(not(feature = "disable_checks"))] {
         unsafe { curandGenerateUniform(generator, output_ptr, num) }.assert_success()
@@ -107,6 +110,7 @@ pub fn curand_generate_uniform(generator: *mut StructCurandGenerator, output_ptr
     }
 }
 
+#[inline]
 pub fn curand_generate_normal(generator: *mut StructCurandGenerator, output_ptr: *mut f32, num: usize, mean: f32, stddev: f32) {
     #[cfg(not(feature = "disable_checks"))] {
         unsafe { curandGenerateNormal(generator, output_ptr, num, mean, stddev) }.assert_success()
@@ -116,6 +120,7 @@ pub fn curand_generate_normal(generator: *mut StructCurandGenerator, output_ptr:
     }
 }
 
+#[inline]
 pub fn curand_generate_lognormal(generator: *mut StructCurandGenerator, output_ptr: *mut f32, num: usize, mean: f32, stddev: f32) {
     #[cfg(not(feature = "disable_checks"))] {
         unsafe { curandGenerateLogNormal(generator, output_ptr, num, mean, stddev) }.assert_success()
@@ -125,6 +130,7 @@ pub fn curand_generate_lognormal(generator: *mut StructCurandGenerator, output_p
     }
 }
 
+#[inline]
 pub fn curand_generate_poisson(generator: *mut StructCurandGenerator, output_ptr: *mut f32, num: usize, lambda: f32) {
     #[cfg(not(feature = "disable_checks"))] {
         unsafe { curandGeneratePoisson(generator, output_ptr, num, lambda) }.assert_success()
@@ -134,6 +140,7 @@ pub fn curand_generate_poisson(generator: *mut StructCurandGenerator, output_ptr
     }
 }
 
+#[inline]
 pub fn curand_set_stream(generator: *mut StructCurandGenerator, stream: cudaStream_t) {
     #[cfg(not(feature = "disable_checks"))] {
         unsafe { curandSetStream(generator, stream) }.assert_success()

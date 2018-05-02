@@ -8,7 +8,7 @@ repository = "https://github.com/Ltei/cumath"
 authors = ["ltei"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
-keywords = ["cuda", "gpu", "matrix", "vector"]
+keywords = ["ffi", "wrapper", "cuda", "gpu", "matrix"]
 build = "build.rs"
 exclude = [
     ".gitignore",
