@@ -17,11 +17,11 @@ Install nvcc before : https://developer.nvidia.com/cuda-toolkit
 - CuBLAS
 - CuRAND
 - Cuda streams
+- Data type genericity
 
 ## To be implemented :
 
-- Data type genericity (being able to use integer vectors)
-- User-defined Cuda kernels
+- User-definable Cuda kernels
 - More built-in functions
 - Improve automatic cuda-compatible c compiler detection
 
