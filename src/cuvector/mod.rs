@@ -1,19 +1,15 @@
 
-
-#[macro_use]
-mod macros;
-pub(crate) mod ffi;
-use self::ffi::*;
-
-use std::{self, marker::PhantomData, mem::size_of, fmt};
-use cuda_core::{cuda::*, cuda_ffi::*};
 #[cfg(not(feature = "disable_checks"))]
 use meta::assert::*;
 
+use std::{fmt, mem::size_of, os::raw::c_void, marker::PhantomData};
+use cuda_core::{cuda::*, cuda_ffi::*};
+use CuDataType;
+use kernel::*;
 
 
-mod vector;
-pub use self::vector::*;
+mod owned;
+pub use self::owned::*;
 mod slice;
 pub use self::slice::*;
 mod ptr;
@@ -24,8 +20,8 @@ mod math;
 pub use self::math::*;
 
 
-/// Immutable vector operator trait.
-pub trait CuVectorOp: fmt::Debug {
+
+pub trait CuVectorOp<T: CuDataType>: fmt::Debug {
 
     /// [inline]
     /// Returns the vector's length.
@@ -35,22 +31,10 @@ pub trait CuVectorOp: fmt::Debug {
     /// [inline]
     /// Returns a pointer on the vector's data.
     #[inline]
-    fn as_ptr(&self) -> *const f32;
-
-    /// Returns a new copy of 'self'.
-    fn clone(&self) -> CuVector where Self: Sized {
-        let mut output = {
-            let len = self.len();
-            let mut data = std::ptr::null_mut();
-            cuda_malloc(&mut data, len*size_of::<f32>());
-            CuVector { len, ptr: (data as *mut f32) }
-        };
-        output.clone_from_device(self);
-        output
-    }
+    fn as_ptr(&self) -> *const T;
 
     /// Creates a vector slice starting from self.ptr()+offset, to self.ptr()+offset+len.
-    fn slice<'a>(&'a self, offset: usize, len: usize) -> CuVectorSlice<'a> {
+    fn slice<'a>(&'a self, offset: usize, len: usize) -> CuVectorSlice<'a, T> {
         #[cfg(not(feature = "disable_checks"))] {
             assert_infeq_usize(offset+len, "offset+len", self.len(), "self.len");
         }
@@ -62,51 +46,59 @@ pub trait CuVectorOp: fmt::Debug {
     }
 
     /// Returns an iterator over a vector, returning vector slices.
-    fn slice_iter<'a>(&'a self) -> CuVectorSliceIter<'a> {
+    fn slice_iter<'a>(&'a self) -> CuVectorSliceIter<'a, T> {
         CuVectorSliceIter {
-            parent: PhantomData,
+            _parent: PhantomData,
             len: self.len(),
             ptr: self.as_ptr(),
         }
     }
 
+    fn matrix_slice<'a>(&'a self, offset: usize, rows: usize, cols: usize) -> ::CuMatrixSlice<'a, T> {
+        if offset + rows * cols >= self.len() { panic!() }
+        ::CuMatrixSlice {
+            _parent: PhantomData,
+            ptr: unsafe { self.as_ptr().offset(offset as isize) },
+            rows, cols, len: rows*cols
+        }
+    }
+
     /// Clone this vector's data to host memory.
-    fn clone_to_host(&self, data: &mut [f32]) {
+    fn clone_to_host(&self, data: &mut [T]) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(self.len(), "self.len()", data.len(), "data.len()");
         }
-        cuda_memcpy(data.as_mut_ptr(), self.as_ptr(), data.len()*size_of::<f32>(), cudaMemcpyKind::DeviceToHost);
+        cuda_memcpy(data.as_mut_ptr() as *mut c_void, self.as_ptr() as *const c_void, data.len()*size_of::<T>(), cudaMemcpyKind::DeviceToHost);
     }
 
-    #[allow(dead_code)]
-    fn dev_assert_equals(&self, data: &[f32]) where Self: Sized {
+    fn dev_assert_equals(&self, data: &[T]) where Self: Sized {
         if self.len() != data.len() { panic!(); }
-        let mut buffer = vec![0.0; self.len()];
-        self.clone_to_host(&mut buffer);
+        let mut buffer = vec![T::zero(); self.len()];
+        self.clone_to_host(buffer.as_mut_slice());
         for i in 0..data.len() {
-            let delta = data[i]-buffer[i];
-            if delta < -0.00001 || delta > 0.00001 { panic!("At index {} : {:.8} != {:.8}", i, data[i], buffer[i]); }
+            if data[i] != buffer[i] { panic!("At index {} : {:.8} != {:.8}", i, data[i], buffer[i]); }
         }
     }
 
 }
 
+
 /// Mutable vector operator trait.
-pub trait CuVectorOpMut: CuVectorOp {
+pub trait CuVectorOpMut<T: CuDataType>: CuVectorOp<T> {
 
     /// [inline]
     /// Returns a mutable pointer on the vector's data
     #[inline]
-    fn as_mut_ptr(&mut self) -> *mut f32;
+    fn as_mut_ptr(&mut self) -> *mut T;
 
     /// [inline]
     /// Supertrait upcasting
     #[inline]
-    fn as_immutable(&self) -> &CuVectorOp;
+    fn as_immutable(&self) -> &CuVectorOp<T>;
 
     /// Returns a mutable vector slice pointing to this vector's data :
     /// self[offset..offset+len]
-    fn slice_mut<'a>(&'a mut self, offset: usize, len: usize) -> CuVectorSliceMut<'a> {
+    fn slice_mut<'a>(&'a mut self, offset: usize, len: usize) -> CuVectorSliceMut<'a, T> {
         #[cfg(not(feature = "disable_checks"))] {
             assert_infeq_usize(offset + len, "offset+len", self.len(), "self.len");
         }
@@ -120,7 +112,7 @@ pub trait CuVectorOpMut: CuVectorOp {
     /// Returns two mutable vector slices pointing to this vector's data :
     /// The first one will be self[offset0..offset0+len0]
     /// The second one will be self[offset0+len0+offset1..offset0+len0+offset1+len1]
-    fn slice_mut2<'a>(&'a mut self, offset0: usize, len0: usize, mut offset1: usize, len1: usize) -> (CuVectorSliceMut<'a>, CuVectorSliceMut<'a>) {
+    fn slice_mut2<'a>(&'a mut self, offset0: usize, len0: usize, mut offset1: usize, len1: usize) -> (CuVectorSliceMut<'a, T>, CuVectorSliceMut<'a, T>) {
         offset1 += offset0+len0;
         #[cfg(not(feature = "disable_checks"))] {
             assert!(offset1 + len1 <= self.len());
@@ -130,16 +122,16 @@ pub trait CuVectorOpMut: CuVectorOp {
             _parent: PhantomData, len: len0,
             ptr: unsafe { self.as_mut_ptr().offset(offset0 as isize) },
         },
-        CuVectorSliceMut {
-            _parent: PhantomData, len: len1,
-            ptr: unsafe { self.as_mut_ptr().offset(offset1 as isize) },
-        })
+         CuVectorSliceMut {
+             _parent: PhantomData, len: len1,
+             ptr: unsafe { self.as_mut_ptr().offset(offset1 as isize) },
+         })
     }
 
     /// Returns a vector mutable vector slices pointing to this vector's data,
     /// for a slice of tuples representing the offset from the end of the last
     /// slice (starting at 0), and the len.
-    fn slice_mutn<'a>(&'a mut self, offsets_lens: &[(usize,usize)]) -> Vec<CuVectorSliceMut<'a>> {
+    fn slice_mutn<'a>(&'a mut self, offsets_lens: &[(usize,usize)]) -> Vec<CuVectorSliceMut<'a, T>> {
         let mut offset = 0;
         let mut slices = Vec::with_capacity(offsets_lens.len());
         offsets_lens.iter().for_each(|&(off, len)| {
@@ -156,11 +148,20 @@ pub trait CuVectorOpMut: CuVectorOp {
     }
 
     /// Returns an iterator over a mutable vector, returning mutable vector slices.
-    fn slice_mut_iter<'a>(&'a mut self) -> CuVectorSliceIterMut<'a> {
+    fn slice_mut_iter<'a>(&'a mut self) -> CuVectorSliceIterMut<'a, T> {
         CuVectorSliceIterMut {
-            parent: PhantomData,
+            _parent: PhantomData,
             len: self.len(),
             ptr: self.as_mut_ptr(),
+        }
+    }
+
+    fn matrix_slice_mut<'a>(&'a mut self, offset: usize, rows: usize, cols: usize) -> ::CuMatrixSliceMut<'a, T> {
+        if offset + rows * cols >= self.len() { panic!() }
+        ::CuMatrixSliceMut {
+            _parent: PhantomData,
+            ptr: unsafe { self.as_mut_ptr().offset(offset as isize) },
+            rows, cols, len: rows*cols
         }
     }
 
@@ -168,98 +169,48 @@ pub trait CuVectorOpMut: CuVectorOp {
     /// - It won't free the inner GPU-pointer when it goes out of scope
     /// - It won't check if the underlying memory is still allocated when used
     /// -> Use at your own risk
-    fn as_wrapped_ptr(&mut self) -> CuVectorPtr {
-        CuVectorPtr {
-            deref: CuVectorPtrDeref {
-                len: self.len(),
-                ptr: self.as_mut_ptr(),
-            }
-        }
+    fn as_wrapped_ptr(&mut self) -> CuVectorPtr<T> {
+        unsafe { CuVectorPtr::<T>::from_raw_ptr(self.as_mut_ptr(), self.len()) }
     }
 
     /// Copy host memory into this vector.
-    fn clone_from_host(&mut self, data: &[f32]) {
+    fn clone_from_host(&mut self, data: &[T]) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(self.len(), "self.len()", data.len(), "data.len()");
         }
-        cuda_memcpy(self.as_mut_ptr(), data.as_ptr(), data.len()*size_of::<f32>(), cudaMemcpyKind::HostToDevice);
+        cuda_memcpy(self.as_mut_ptr() as *mut c_void, data.as_ptr() as *const c_void, data.len()*size_of::<T>(), cudaMemcpyKind::HostToDevice);
     }
 
     /// Clone device memory into this vector.
-    fn clone_from_device(&mut self, source: &CuVectorOp) {
+    fn clone_from_device(&mut self, source: &CuVectorOp<T>) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(self.len(), "self.len()", source.len(), "data.len()");
         }
-        cuda_memcpy(self.as_mut_ptr(), source.as_ptr(), self.len()*size_of::<f32>(), cudaMemcpyKind::DeviceToDevice);
+        cuda_memcpy(self.as_mut_ptr() as *mut c_void, source.as_ptr() as *const c_void, self.len()*size_of::<T>(), cudaMemcpyKind::DeviceToDevice);
     }
 
     /// Initializes the vector with value.
-    fn init(&mut self, value: f32, stream: &CudaStream) {
-        unsafe { VectorKernel_init(self.as_mut_ptr(), self.len() as i32, value, stream.stream) }
-    }
+    fn init(&mut self, value: T, stream: &CudaStream);
 
     /// Add value to each element of the vector.
-    fn add_value(&mut self, value: f32, stream: &CudaStream) {
-        unsafe { VectorKernel_addValue(self.as_ptr(), self.as_mut_ptr(), self.len() as i32, value, stream.stream) }
-    }
+    fn add_value(&mut self, value: T, stream: &CudaStream);
 
     /// Scale each element of the vector by value.
-    fn scl(&mut self, value: f32, stream: &CudaStream) {
-        unsafe { VectorKernel_scl(self.as_ptr(), self.as_mut_ptr(), self.len() as i32, value, stream.stream) }
-    }
+    fn scl(&mut self, value: T, stream: &CudaStream);
 
     /// Add an other vector to this one.
-    fn add(&mut self, right_op: &CuVectorOp, stream: &CudaStream) {
-        #[cfg(not(feature = "disable_checks"))] {
-            assert_eq_usize(self.len(), "self.len()", right_op.len(), "right_op.len()");
-        }
-        unsafe { VectorKernel_add(self.as_ptr(), right_op.as_ptr(), self.as_mut_ptr(), self.len() as i32, stream.stream) }
-    }
+    fn add(&mut self, right_op: &CuVectorOp<T>, stream: &CudaStream);
 
     /// Substract an other vector to this one.
-    fn sub(&mut self, right_op: &CuVectorOp, stream: &CudaStream) {
-        #[cfg(not(feature = "disable_checks"))] {
-            assert_eq_usize(self.len(), "self.len()", right_op.len(), "right_op.len()");
-        }
-        unsafe { VectorKernel_sub(self.as_ptr(), right_op.as_ptr(), self.as_mut_ptr(), self.len() as i32, stream.stream) }
-    }
+    fn sub(&mut self, right_op: &CuVectorOp<T>, stream: &CudaStream);
 
     /// Multiply each element of the vector by the corresponding element in the parameter vector.
-    fn pmult(&mut self, right_op: &CuVectorOp, stream: &CudaStream) {
-        #[cfg(not(feature = "disable_checks"))] {
-            assert_eq_usize(self.len(), "self.len()", right_op.len(), "right_op.len()");
-        }
-        unsafe { VectorKernel_pmult(self.as_ptr(), right_op.as_ptr(), self.as_mut_ptr(), self.len() as i32, stream.stream) }
-    }
+    fn pmult(&mut self, right_op: &CuVectorOp<T>, stream: &CudaStream);
 
     /// Multiply each element of the vector by itself.
-    fn psquare(&mut self, stream: &CudaStream) {
-        unsafe { VectorKernel_psquare(self.as_ptr(),self.as_mut_ptr(), self.len() as i32, stream.stream) }
-    }
-
-    /// Apply the sigmoid function to each element of the vector.
-    fn sigmoid(&mut self, stream: &CudaStream) {
-        unsafe { VectorKernel_sigmoid(self.as_ptr(), self.as_mut_ptr(), self.len() as i32, stream.stream) }
-    }
-
-    /// Apply the tanh function to each element of the vector.
-    fn tanh(&mut self, stream: &CudaStream) {
-        unsafe { VectorKernel_tanh(self.as_ptr(), self.as_mut_ptr(), self.len() as i32, stream.stream) }
-    }
+    fn psquare(&mut self, stream: &CudaStream);
 
     /// self[i] = self[i] > threshold ? 1.0 : 0.0
-    fn binarize(&mut self, threshold: f32, stream: &CudaStream) {
-        unsafe { VectorKernel_binarize(self.as_ptr(), threshold, self.as_mut_ptr(), self.len() as i32, stream.stream) }
-    }
-
-    fn binarize_one_max(&mut self, stream: &CudaStream) {
-        unsafe { VectorKernel_binarizeOneMax(self.as_ptr(), self.as_mut_ptr(), self.len() as i32, stream.stream) }
-    }
-
-    fn custom_error_calc(&mut self, ideal_vector: &CuVectorOp, threshold: f32, scale_foff: f32, scale_fon: f32, stream: &CudaStream) {
-        unsafe { VectorKernel_customErrorCalc(self.as_ptr(), ideal_vector.as_ptr(),
-                                              threshold, scale_foff, scale_fon,
-                                              self.as_mut_ptr(), self.len() as i32, stream.stream) }
-    }
+    fn binarize(&mut self, threshold: T, stream: &CudaStream);
 
 }

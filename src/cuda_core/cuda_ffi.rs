@@ -143,42 +143,42 @@ extern {
 
 
 #[inline]
-pub fn cuda_malloc(ptr: *mut*mut f32, size: usize) {
+pub fn cuda_malloc(ptr: *mut*mut c_void, size: usize) {
     #[cfg(not(feature = "disable_checks"))] {
-        unsafe { cudaMalloc(ptr as *mut *mut c_void, size) }.assert_success()
+        unsafe { cudaMalloc(ptr, size) }.assert_success()
     }
     #[cfg(feature = "disable_checks")] {
-        unsafe { cudaMalloc(ptr as *mut *mut c_void, size) };
+        unsafe { cudaMalloc(ptr, size) };
     }
 }
 
 #[inline]
-pub fn cuda_free(dev_ptr: *mut f32) {
+pub fn cuda_free(dev_ptr: *mut c_void) {
     #[cfg(not(feature = "disable_checks"))] {
-        unsafe { cudaFree(dev_ptr as *mut c_void) }.assert_success()
+        unsafe { cudaFree(dev_ptr) }.assert_success()
     }
     #[cfg(feature = "disable_checks")] {
-        unsafe { cudaFree(dev_ptr as *mut c_void) };
+        unsafe { cudaFree(dev_ptr) };
     }
 }
 
 #[inline]
-pub fn cuda_memcpy(dst: *mut f32, src: *const f32, count: usize, kind: cudaMemcpyKind) {
+pub fn cuda_memcpy(dst: *mut c_void, src: *const c_void, count: usize, kind: cudaMemcpyKind) {
     #[cfg(not(feature = "disable_checks"))] {
-        unsafe { cudaMemcpy(dst as * mut c_void, src as * mut c_void, count, kind) }.assert_success()
+        unsafe { cudaMemcpy(dst, src, count, kind) }.assert_success()
     }
     #[cfg(feature = "disable_checks")] {
-        unsafe { cudaMemcpy(dst as * mut c_void, src as * mut c_void, count, kind) };
+        unsafe { cudaMemcpy(dst, src, count, kind) };
     }
 }
 
 #[inline]
-pub fn cuda_memcpy2d(dst: *mut f32, dpitch: usize, src: *const f32, spitch: usize, width: usize, height: usize, kind: cudaMemcpyKind) {
+pub fn cuda_memcpy2d(dst: *mut c_void, dpitch: usize, src: *const c_void, spitch: usize, width: usize, height: usize, kind: cudaMemcpyKind) {
     #[cfg(not(feature = "disable_checks"))] {
-        unsafe { cudaMemcpy2D(dst as *mut c_void, dpitch, src as *mut c_void, spitch, width, height, kind) }.assert_success()
+        unsafe { cudaMemcpy2D(dst, dpitch, src, spitch, width, height, kind) }.assert_success()
     }
     #[cfg(feature = "disable_checks")] {
-        unsafe { cudaMemcpy2D(dst as *mut c_void, dpitch, src as *mut c_void, spitch, width, height, kind) };
+        unsafe { cudaMemcpy2D(dst, dpitch, src, spitch, width, height, kind) };
     }
 }
 

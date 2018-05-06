@@ -2,8 +2,8 @@
 use std::ptr;
 
 use super::{cuda::*, curand_ffi::*};
-use ::cudata::*;
-use ::meta::result::*;
+use cuvector::{CuVectorOpMut};
+use meta::result::*;
 
 pub use super::curand_ffi::CurandRngType;
 
@@ -32,36 +32,35 @@ impl CurandGenerator {
         curand_set_stream(self.handle, stream.stream);
     }
 
-    pub fn generate_uniform(&mut self, output: &mut CuPackedDataMut) {
+    pub fn generate_uniform(&mut self, output: &mut CuVectorOpMut<f32>) {
         curand_generate_uniform(self.handle, output.as_mut_ptr(), output.len());
     }
 
-    pub fn generate_uniform_range(&mut self, output: &mut CuPackedDataMut, min: f32, max: f32, stream: &CudaStream) {
-        use cuvector::ffi::VectorKernel_aYpb;
+    pub fn generate_uniform_range(&mut self, output: &mut CuVectorOpMut<f32>, min: f32, max: f32, stream: &CudaStream) {
         #[cfg(not(feature = "disable_checks"))] {
             assert!(min <= max, "min > max");
         }
             curand_generate_uniform(self.handle, output.as_mut_ptr(), output.len());
         unsafe {
-            VectorKernel_aYpb(max-min, min, output.as_mut_ptr(), output.len() as i32, stream.stream);
+            ::kernel::VectorPacked_aypb_f32(max-min, output.as_mut_ptr(), min, output.len() as i32, stream.stream);
         }
     }
 
-    pub fn generate_normal(&mut self, output: &mut CuPackedDataMut, mean: f32, stddev: f32) {
+    pub fn generate_normal(&mut self, output: &mut CuVectorOpMut<f32>, mean: f32, stddev: f32) {
         #[cfg(not(feature = "disable_checks"))] {
             assert!(stddev >= 0.0, "stddev < 0.0");
         }
         curand_generate_normal(self.handle, output.as_mut_ptr(), output.len(), mean, stddev);
     }
 
-    pub fn generate_lognormal(&mut self, output: &mut CuPackedDataMut, mean: f32, stddev: f32) {
+    pub fn generate_lognormal(&mut self, output: &mut CuVectorOpMut<f32>, mean: f32, stddev: f32) {
         #[cfg(not(feature = "disable_checks"))] {
             assert!(stddev >= 0.0, "stddev < 0.0");
         }
         curand_generate_lognormal(self.handle, output.as_mut_ptr(), output.len(), mean, stddev);
     }
 
-    pub fn generate_poisson(&mut self, output: &mut CuPackedDataMut, lambda: f32) {
+    pub fn generate_poisson(&mut self, output: &mut CuVectorOpMut<f32>, lambda: f32) {
         #[cfg(not(feature = "disable_checks"))] {
             assert!(lambda >= 0.0, "lambda < 0.0");
         }
@@ -79,7 +78,7 @@ mod tests {
     fn curand_generate_uniform() {
         let mut generator = CurandGenerator::new(CurandRngType::PseudoDefault).unwrap();
 
-        let mut vector = CuVector::new(10, 0.0);
+        let mut vector = CuVector::<f32>::new(0.0, 10);
         generator.generate_uniform(&mut vector);
 
         let mut buffer = vec![0.0; 10];
@@ -97,7 +96,7 @@ mod tests {
 
         let mut generator = CurandGenerator::new(CurandRngType::PseudoDefault).unwrap();
 
-        let mut vector = CuVector::new(10, 0.0);
+        let mut vector = CuVector::<f32>::new(0.0, 10);
         generator.generate_uniform_range(&mut vector, min, max, &super::DEFAULT_STREAM);
 
         let mut buffer = vec![0.0; 10];

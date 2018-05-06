@@ -2,115 +2,246 @@
 use super::*;
 
 
+pub struct CuVectorMath<T: CuDataType> {
+    _phantom: PhantomData<T>
+}
 
-pub struct CuVectorMath;
-
-impl CuVectorMath {
+impl CuVectorMath<i32> {
 
     /// output[i] = vector[i] + value
-    pub fn add_value(vector: &CuVectorOp, value: f32, output: &mut CuVectorOpMut, stream: &CudaStream) {
-        unsafe { VectorKernel_addValue(vector.as_ptr(), output.as_mut_ptr(), vector.len() as i32, value, stream.stream) }
+    pub fn add_value(vector: &CuVectorOp<i32>, value: i32, output: &mut CuVectorOpMut<i32>, stream: &CudaStream) {
+        unsafe { VectorPacked_addValue_i32(vector.as_ptr(), value, output.as_mut_ptr(), vector.len() as i32, stream.stream) }
     }
 
     /// output[i] = vector[i] * value
-    pub fn scale(vector: &CuVectorOp, value: f32, output: &mut CuVectorOpMut, stream: &CudaStream) {
-        unsafe { VectorKernel_scl(vector.as_ptr(), output.as_mut_ptr(), vector.len() as i32, value, stream.stream) }
+    pub fn scale(vector: &CuVectorOp<i32>, value: i32, output: &mut CuVectorOpMut<i32>, stream: &CudaStream) {
+        unsafe { VectorPacked_scl_i32(vector.as_ptr(), value, output.as_mut_ptr(), vector.len() as i32, stream.stream) }
     }
 
     /// output[i] = left_op[i] + right_op[i]
-    pub fn add(left_op: &CuVectorOp, right_op: &CuVectorOp, output: &mut CuVectorOpMut, stream: &CudaStream) {
+    pub fn add(left_op: &CuVectorOp<i32>, right_op: &CuVectorOp<i32>, output: &mut CuVectorOpMut<i32>, stream: &CudaStream) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(left_op.len(), "left_op.len()", right_op.len(), "right_op.len()");
             assert_eq_usize(left_op.len(), "left_op.len()", output.len(), "output.len()");
         }
-        unsafe { VectorKernel_add(left_op.as_ptr(), right_op.as_ptr(), output.as_mut_ptr(), left_op.len() as i32, stream.stream) }
+        unsafe { VectorPacked_add_i32(left_op.as_ptr(), right_op.as_ptr(), output.as_mut_ptr(), left_op.len() as i32, stream.stream) }
     }
 
     /// output[i] = left_op[i] - right_op[i]
-    pub fn sub(left_op: &CuVectorOp, right_op: &CuVectorOp, output: &mut CuVectorOpMut, stream: &CudaStream) {
+    pub fn sub(left_op: &CuVectorOp<i32>, right_op: &CuVectorOp<i32>, output: &mut CuVectorOpMut<i32>, stream: &CudaStream) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(left_op.len(), "left_op.len()", right_op.len(), "right_op.len()");
             assert_eq_usize(left_op.len(), "left_op.len()", output.len(), "output.len()");
         }
-        unsafe { VectorKernel_sub(left_op.as_ptr(),
+        unsafe { VectorPacked_sub_i32(left_op.as_ptr(),
+                                      right_op.as_ptr(),
+                                      output.as_mut_ptr(),
+                                      left_op.len() as i32, stream.stream) }
+    }
+
+    /// output[i] = left_op[i] * right_op[i]
+    pub fn mult(left_op: &CuVectorOp<i32>, right_op: &CuVectorOp<i32>, output: &mut CuVectorOpMut<i32>, stream: &CudaStream) {
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(left_op.len(), "left_op.len()", right_op.len(), "right_op.len()");
+            assert_eq_usize(left_op.len(), "left_op.len()", output.len(), "output.len()");
+        }
+        unsafe { VectorPacked_mult_i32(left_op.as_ptr(),
+                                       right_op.as_ptr(),
+                                       output.as_mut_ptr(),
+                                       left_op.len() as i32, stream.stream) }
+    }
+
+
+    /// y[i] = a*y[i]+b
+    pub fn aypb(a: i32, b: i32, y: &mut CuVectorOpMut<i32>, stream: &CudaStream) {
+        unsafe { VectorPacked_aypb_i32(a, y.as_mut_ptr(), b, y.len() as i32, stream.stream) }
+    }
+
+    /// y[i] *= (a*x[i])+b
+    pub fn axpb_y(a: i32, x: &CuVectorOp<i32>, b: i32, y: &mut CuVectorOpMut<i32>, stream: &CudaStream) {
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(x.len(), "x.len()", y.len(), "y.len()");
+        }
+        unsafe { VectorPacked_axpb_y_i32(a, x.as_ptr(), b, y.as_mut_ptr(), x.len() as i32, stream.stream) }
+    }
+
+    /// y[i] += x[i] * v[i]
+    pub fn xvpy(x: &CuVectorOp<i32>, v: &CuVectorOp<i32>, y: &mut CuVectorOpMut<i32>, stream: &CudaStream) {
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(x.len(), "x.len()", v.len(), "v.len()");
+            assert_eq_usize(x.len(), "x.len()", y.len(), "y.len()");
+        }
+        unsafe { VectorPacked_xvpy_i32(x.as_ptr(), v.as_ptr(), y.as_mut_ptr(), x.len() as i32, stream.stream) }
+    }
+
+    /// y[i] += x[i] * (a*v[i]+b)
+    pub fn x_avpb_py(x: &CuVectorOp<i32>, a: i32, v: &CuVectorOp<i32>, b: i32, y: &mut CuVectorOpMut<i32>, stream: &CudaStream) {
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(x.len(), "x.len()", v.len(), "v.len()");
+            assert_eq_usize(x.len(), "x.len()", y.len(), "y.len()");
+        }
+        unsafe { VectorPacked_x_avpb_py_i32(x.as_ptr(), a, v.as_ptr(), b, y.as_mut_ptr(), x.len() as i32, stream.stream) }
+    }
+    
+}
+
+impl CuVectorMath<f32> {
+
+    /// output[i] = vector[i] + value
+    pub fn add_value(vector: &CuVectorOp<f32>, value: f32, output: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
+        unsafe { VectorPacked_addValue_f32(vector.as_ptr(), value, output.as_mut_ptr(), vector.len() as i32, stream.stream) }
+    }
+
+    /// output[i] = vector[i] * value
+    pub fn scale(vector: &CuVectorOp<f32>, value: f32, output: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
+        unsafe { VectorPacked_scl_f32(vector.as_ptr(), value, output.as_mut_ptr(), vector.len() as i32, stream.stream) }
+    }
+
+    /// output[i] = left_op[i] + right_op[i]
+    pub fn add(left_op: &CuVectorOp<f32>, right_op: &CuVectorOp<f32>, output: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(left_op.len(), "left_op.len()", right_op.len(), "right_op.len()");
+            assert_eq_usize(left_op.len(), "left_op.len()", output.len(), "output.len()");
+        }
+        unsafe { VectorPacked_add_f32(left_op.as_ptr(), right_op.as_ptr(), output.as_mut_ptr(), left_op.len() as i32, stream.stream) }
+    }
+
+    /// output[i] = left_op[i] - right_op[i]
+    pub fn sub(left_op: &CuVectorOp<f32>, right_op: &CuVectorOp<f32>, output: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(left_op.len(), "left_op.len()", right_op.len(), "right_op.len()");
+            assert_eq_usize(left_op.len(), "left_op.len()", output.len(), "output.len()");
+        }
+        unsafe { VectorPacked_sub_f32(left_op.as_ptr(),
                                   right_op.as_ptr(),
                                   output.as_mut_ptr(),
                                   left_op.len() as i32, stream.stream) }
     }
 
     /// output[i] = left_op[i] * right_op[i]
-    pub fn pmult(left_op: &CuVectorOp, right_op: &CuVectorOp, output: &mut CuVectorOpMut, stream: &CudaStream) {
+    pub fn mult(left_op: &CuVectorOp<f32>, right_op: &CuVectorOp<f32>, output: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(left_op.len(), "left_op.len()", right_op.len(), "right_op.len()");
             assert_eq_usize(left_op.len(), "left_op.len()", output.len(), "output.len()");
         }
-        unsafe { VectorKernel_pmult(left_op.as_ptr(),
+        unsafe { VectorPacked_mult_f32(left_op.as_ptr(),
                                     right_op.as_ptr(),
                                     output.as_mut_ptr(),
                                     left_op.len() as i32, stream.stream) }
     }
 
-    /// output[i] = sigmoid(vector[i])
-    pub fn sigmoid(vector: &CuVectorOp, output: &mut CuVectorOpMut, stream: &CudaStream) {
-        #[cfg(not(feature = "disable_checks"))] {
-            assert_eq_usize(vector.len(), "vector.len()", output.len(), "output.len()");
-        }
-        unsafe { VectorKernel_sigmoid(vector.as_ptr(), output.as_mut_ptr(), vector.len() as i32, stream.stream) }
-    }
-
-    /// output[i] = sigmoid_deriv(vector[i])
-    pub fn sigmoid_deriv(vector: &CuVectorOp, output: &mut CuVectorOpMut, stream: &CudaStream) {
-        #[cfg(not(feature = "disable_checks"))] {
-            assert_eq_usize(vector.len(), "vector.len()", output.len(), "output.len()");
-        }
-        unsafe { VectorKernel_sigmoidDeriv(vector.as_ptr(), output.as_mut_ptr(), vector.len() as i32, stream.stream) }
-    }
-
-    /// output[i] = tanh(vector[i])
-    pub fn tanh(vector: &CuVectorOp, output: &mut CuVectorOpMut, stream: &CudaStream) {
-        #[cfg(not(feature = "disable_checks"))] {
-            assert_eq_usize(vector.len(), "vector.len()", output.len(), "output.len()");
-        }
-        unsafe { VectorKernel_tanh(vector.as_ptr(), output.as_mut_ptr(), vector.len() as i32, stream.stream) }
-    }
-
-    pub fn binarize_one_max(vector: &CuVectorOp, output: &mut CuVectorOpMut, stream: &CudaStream) {
-        #[cfg(not(feature = "disable_checks"))] {
-            assert_eq_usize(vector.len(), "vector.len()", output.len(), "output.len()");
-        }
-        unsafe { VectorKernel_binarizeOneMax(vector.as_ptr(), output.as_mut_ptr(), vector.len() as i32, stream.stream) }
-    }
 
     /// y[i] = a*y[i]+b
-    pub fn aypb(a: f32, b: f32, y: &mut CuVectorOpMut, stream: &CudaStream) {
-        unsafe { VectorKernel_aYpb(a, b, y.as_mut_ptr(), y.len() as i32, stream.stream) }
+    pub fn aypb(a: f32, b: f32, y: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
+        unsafe { VectorPacked_aypb_f32(a, y.as_mut_ptr(), b, y.len() as i32, stream.stream) }
     }
 
     /// y[i] *= (a*x[i])+b
-    pub fn axpb_y(a: f32, x: &CuVectorOp, b: f32, y: &mut CuVectorOpMut, stream: &CudaStream) {
+    pub fn axpb_y(a: f32, x: &CuVectorOp<f32>, b: f32, y: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(x.len(), "x.len()", y.len(), "y.len()");
         }
-        unsafe { VectorKernel_aXpb_Y(a, x.as_ptr(), b, y.as_mut_ptr(), x.len() as i32, stream.stream) }
+        unsafe { VectorPacked_axpb_y_f32(a, x.as_ptr(), b, y.as_mut_ptr(), x.len() as i32, stream.stream) }
     }
 
     /// y[i] += x[i] * v[i]
-    pub fn xvpy(x: &CuVectorOp, v: &CuVectorOp, y: &mut CuVectorOpMut, stream: &CudaStream) {
+    pub fn xvpy(x: &CuVectorOp<f32>, v: &CuVectorOp<f32>, y: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(x.len(), "x.len()", v.len(), "v.len()");
             assert_eq_usize(x.len(), "x.len()", y.len(), "y.len()");
         }
-        unsafe { VectorKernel_XVpY(x.as_ptr(), v.as_ptr(), y.as_mut_ptr(), x.len() as i32, stream.stream) }
+        unsafe { VectorPacked_xvpy_f32(x.as_ptr(), v.as_ptr(), y.as_mut_ptr(), x.len() as i32, stream.stream) }
     }
 
     /// y[i] += x[i] * (a*v[i]+b)
-    pub fn x_avpb_y(x: &CuVectorOp, a: f32, v: &CuVectorOp, b: f32, y: &mut CuVectorOpMut, stream: &CudaStream) {
+    pub fn x_avpb_py(x: &CuVectorOp<f32>, a: f32, v: &CuVectorOp<f32>, b: f32, y: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(x.len(), "x.len()", v.len(), "v.len()");
             assert_eq_usize(x.len(), "x.len()", y.len(), "y.len()");
         }
-        unsafe { VectorKernel_X_aVpb_Y(x.as_ptr(), a, v.as_ptr(), b, y.as_mut_ptr(), x.len() as i32, stream.stream) }
+        unsafe { VectorPacked_x_avpb_py_f32(x.as_ptr(), a, v.as_ptr(), b, y.as_mut_ptr(), x.len() as i32, stream.stream) }
     }
 
+
+    /// output[i] = sigmoid(vector[i])
+    pub fn sigmoid(vector: &CuVectorOp<f32>, output: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(vector.len(), "vector.len()", output.len(), "output.len()");
+        }
+        unsafe { VectorPacked_sigmoid_f32(vector.as_ptr(), output.as_mut_ptr(), vector.len() as i32, stream.stream) }
+    }
+    /// vector[i] = sigmoid(vector[i])
+    pub fn sigmoid_self(vector: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
+        unsafe { VectorPacked_sigmoid_f32(vector.as_ptr(), vector.as_mut_ptr(), vector.len() as i32, stream.stream) }
+    }
+
+    /// output[i] = sigmoid_deriv(vector[i])
+    pub fn sigmoid_deriv(vector: &CuVectorOp<f32>, output: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(vector.len(), "vector.len()", output.len(), "output.len()");
+        }
+        unsafe { VectorPacked_sigmoidDeriv_f32(vector.as_ptr(), output.as_mut_ptr(), vector.len() as i32, stream.stream) }
+    }
+    /// vector[i] = sigmoid_deriv(vector[i])
+    pub fn sigmoid_deriv_self(vector: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
+        unsafe { VectorPacked_sigmoidDeriv_f32(vector.as_ptr(), vector.as_mut_ptr(), vector.len() as i32, stream.stream) }
+    }
+
+    /// output[i] = tanh(vector[i])
+    pub fn tanh(vector: &CuVectorOp<f32>, output: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(vector.len(), "vector.len()", output.len(), "output.len()");
+        }
+        unsafe { VectorPacked_tanh_f32(vector.as_ptr(), output.as_mut_ptr(), vector.len() as i32, stream.stream) }
+    }
+    /// vector[i] = tanh(vector[i])
+    pub fn tanh_self(vector: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
+        unsafe { VectorPacked_tanh_f32(vector.as_ptr(), vector.as_mut_ptr(), vector.len() as i32, stream.stream) }
+    }
+
+    /// output[i] = tanh(vector[i])
+    pub fn tanh_deriv(vector: &CuVectorOp<f32>, output: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(vector.len(), "vector.len()", output.len(), "output.len()");
+        }
+        unsafe { VectorPacked_tanhDeriv_f32(vector.as_ptr(), output.as_mut_ptr(), vector.len() as i32, stream.stream) }
+    }
+    /// vector[i] = tanh(vector[i])
+    pub fn tanh_deriv_self(vector: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
+        unsafe { VectorPacked_tanhDeriv_f32(vector.as_ptr(), vector.as_mut_ptr(), vector.len() as i32, stream.stream) }
+    }
+
+    /// output[i] = tanh(vector[i])
+    pub fn relu(vector: &CuVectorOp<f32>, output: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(vector.len(), "vector.len()", output.len(), "output.len()");
+        }
+        unsafe { VectorPacked_relu_f32(vector.as_ptr(), output.as_mut_ptr(), vector.len() as i32, stream.stream) }
+    }
+    /// vector[i] = tanh(vector[i])
+    pub fn relu_self(vector: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
+        unsafe { VectorPacked_relu_f32(vector.as_ptr(), vector.as_mut_ptr(), vector.len() as i32, stream.stream) }
+    }
+
+    /// output[i] = tanh(vector[i])
+    pub fn relu_deriv(vector: &CuVectorOp<f32>, output: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(vector.len(), "vector.len()", output.len(), "output.len()");
+        }
+        unsafe { VectorPacked_reluDeriv_f32(vector.as_ptr(), output.as_mut_ptr(), vector.len() as i32, stream.stream) }
+    }
+    /// vector[i] = tanh(vector[i])
+    pub fn relu_deriv_self(vector: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
+        unsafe { VectorPacked_reluDeriv_f32(vector.as_ptr(), vector.as_mut_ptr(), vector.len() as i32, stream.stream) }
+    }
+
+    pub fn custom_error_calc(vector: &mut CuVectorOpMut<f32>, ideal_vector: &CuVectorOp<f32>, threshold: f32, scale_foff: f32, scale_fon: f32, stream: &CudaStream) {
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(vector.len(), "vector.len()", ideal_vector.len(), "ideal_vector.len()");
+        }
+        unsafe { VectorPacked_customErrorCalc_f32(vector.as_ptr(), ideal_vector.as_ptr(),
+                                                  threshold, scale_foff, scale_fon,
+                                                  vector.as_mut_ptr(), vector.len() as i32, stream.stream) }
+    }
 
 }

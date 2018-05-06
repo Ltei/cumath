@@ -3,7 +3,7 @@
 [package]
 name = "cumath"
 description = "Cuda-based matrix/vector computations"
-version = "0.2.4"
+version = "0.2.5"
 repository = "https://github.com/Ltei/cumath"
 authors = ["ltei"]
 license = "MIT OR Apache-2.0"
@@ -23,4 +23,4 @@ disable_checks = []
 
 
 [build-dependencies]
-cc = "1.0"
+cc = "1.0.15"

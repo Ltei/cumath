@@ -1,18 +1,15 @@
 
-#[macro_use]
-mod macros;
-mod ffi;
-use self::ffi::*;
-
-use std::{self, marker::PhantomData, mem::size_of, fmt};
-use cuda_core::{cuda::*, cuda_ffi::*};
 #[cfg(not(feature = "disable_checks"))]
 use meta::assert::*;
 
+use std::{marker::PhantomData, mem::size_of, fmt, os::raw::c_void};
+use cuda_core::{cuda::*, cuda_ffi::*};
+use CuDataType;
 
 
-mod matrix;
-pub use self::matrix::*;
+
+mod owned;
+pub use self::owned::*;
 mod slice;
 pub use self::slice::*;
 mod fragment;
@@ -23,8 +20,9 @@ mod math;
 pub use self::math::*;
 
 
+
 /// Immutable matrix operator trait.
-pub trait CuMatrixOp: fmt::Debug {
+pub trait CuMatrixOp<T: CuDataType>: fmt::Debug {
 
     /// [inline]
     /// Returns the number of rows in the matrix.
@@ -46,25 +44,8 @@ pub trait CuMatrixOp: fmt::Debug {
     #[inline]
     fn leading_dimension(&self) -> usize;
 
-    /// [inline]
-    /// Returns a pointer on the matrix's data.
-    #[inline]
-    fn as_ptr(&self) -> *const f32;
-
-    /// Returns a new copy of 'self'.
-    fn clone(&self) -> CuMatrix where Self: Sized {
-        let mut output = {
-            let len = self.len();
-            let mut data = std::ptr::null_mut();
-            cuda_malloc(&mut data, len*size_of::<f32>());
-            CuMatrix { rows: self.rows(), cols: self.cols(), len, ptr: (data as *mut f32) }
-        };
-        output.clone_from_device(self);
-        output
-    }
-
     /// Returns an immutable sub-matrix.
-    fn slice<'a>(&'a self, row_offset: usize, col_offset: usize, nb_rows: usize, nb_cols: usize) -> CuMatrixFragment<'a> {
+    fn slice<'a>(&'a self, row_offset: usize, col_offset: usize, nb_rows: usize, nb_cols: usize) -> CuMatrixFragment<'a, T> {
         #[cfg(not(feature = "disable_checks"))] {
             assert_infeq_usize(row_offset + nb_rows, "row_offset+nb_rows", self.rows(), "self.rows()");
             assert_infeq_usize(col_offset + nb_cols, "col_offset+nb_cols", self.cols(), "self.cols()");
@@ -79,47 +60,51 @@ pub trait CuMatrixOp: fmt::Debug {
     }
 
     /// Clone this matrix's data to host memory.
-    fn clone_to_host(&self, data: &mut [f32]) {
+    fn clone_to_host(&self, data: &mut [T]) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(self.len(), "self.len()", data.len(), "data.len()");
         }
-        cuda_memcpy2d(data.as_mut_ptr(),
-                      self.rows() * size_of::<f32>(),
-                      self.as_ptr(),
-                      self.leading_dimension() * size_of::<f32>(),
-                      self.rows() * size_of::<f32>(),
+        cuda_memcpy2d(data.as_mut_ptr() as *mut c_void,
+                      self.rows() * size_of::<T>(),
+                      self.as_ptr() as *const c_void,
+                      self.leading_dimension() * size_of::<T>(),
+                      self.rows() * size_of::<T>(),
                       self.cols(),
                       cudaMemcpyKind::DeviceToHost);
     }
 
+    /// [inline]
+    /// Returns a pointer on the matrix's data.
+    #[inline]
+    fn as_ptr(&self) -> *const T;
+
     #[allow(dead_code)]
-    fn dev_assert_equals(&self, data: &[f32]) where Self: Sized {
+    fn dev_assert_equals(&self, data: &[T]) where Self: Sized {
         if self.len() != data.len() { panic!(); }
-        let mut buffer = vec![0.0; self.len()];
-        self.clone_to_host(&mut buffer);
+        let mut buffer = vec![T::zero(); self.len()];
+        self.clone_to_host(buffer.as_mut_slice());
         for i in 0..data.len() {
-            let delta = data[i]-buffer[i];
-            if delta < -0.00001 || delta > 0.00001 { panic!("At index {} : {:.8} != {:.8}", i, data[i], buffer[i]); }
+            if data[i] != buffer[i] { panic!("At index {} : {:.8} != {:.8}", i, data[i], buffer[i]); }
         }
     }
 
 }
 
 /// Mutable matrix operator trait.
-pub trait CuMatrixOpMut: CuMatrixOp  {
+pub trait CuMatrixOpMut<T: CuDataType>: CuMatrixOp<T>  {
 
     /// [inline]
     /// Returns a mutable pointer on the matrix's data
     #[inline]
-    fn as_mut_ptr(&mut self) -> *mut f32;
+    fn as_mut_ptr(&mut self) -> *mut T;
 
     /// [inline]
     /// Supertrait upcasting
     #[inline]
-    fn as_immutable(&self) -> &CuMatrixOp;
+    fn as_immutable(&self) -> &CuMatrixOp<T>;
 
     /// Returns a mutable sub-matrix.
-    fn slice_mut<'a>(&'a mut self, row_offset: usize, col_offset: usize, nb_rows: usize, nb_cols: usize) -> CuMatrixFragmentMut<'a> {
+    fn slice_mut<'a>(&'a mut self, row_offset: usize, col_offset: usize, nb_rows: usize, nb_cols: usize) -> CuMatrixFragmentMut<'a, T> {
         #[cfg(not(feature = "disable_checks"))] {
             assert_infeq_usize(row_offset + nb_rows, "row_offset+nb_rows", self.rows(), "self.rows()");
             assert_infeq_usize(col_offset + nb_cols, "col_offset+nb_cols", self.cols(), "self.cols()");
@@ -137,7 +122,7 @@ pub trait CuMatrixOpMut: CuMatrixOp  {
     /// - It won't free the inner GPU-pointer when it goes out of scope
     /// - It won't check if the underlying memory is still allocated when used
     /// -> Use at your own risk
-    fn as_wrapped_ptr(&mut self) -> CuMatrixPtr {
+    fn as_wrapped_ptr(&mut self) -> CuMatrixPtr<T> {
         CuMatrixPtr {
             deref: CuMatrixPtrDeref {
                 rows: self.rows(),
@@ -149,71 +134,43 @@ pub trait CuMatrixOpMut: CuMatrixOp  {
     }
 
     /// Clone host memory to this matrix's data.
-    fn clone_from_host(&mut self, data: &[f32]) {
+    fn clone_from_host(&mut self, data: &[T]) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(self.len(), "self.len()", data.len(), "data.len()");
         }
-        cuda_memcpy2d(self.as_mut_ptr(),
-                      self.leading_dimension() * size_of::<f32>(),
-                      data.as_ptr(),
-                      self.rows() * size_of::<f32>(),
-                      self.rows() * size_of::<f32>(),
+        cuda_memcpy2d(self.as_mut_ptr() as *mut c_void,
+                      self.leading_dimension() * size_of::<T>(),
+                      data.as_ptr() as *const c_void,
+                      self.rows() * size_of::<T>(),
+                      self.rows() * size_of::<T>(),
                       self.cols(),
                       cudaMemcpyKind::HostToDevice);
     }
 
     /// Clone a matrix's data to this matrix's data.
-    fn clone_from_device(&mut self, data: &CuMatrixOp) {
+    fn clone_from_device(&mut self, data: &CuMatrixOp<T>) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(self.len(), "self.len()", data.len(), "data.len()");
         }
-        cuda_memcpy2d(self.as_mut_ptr(),
-                      self.leading_dimension() * size_of::<f32>(),
-                      data.as_ptr(),
-                      data.leading_dimension() * size_of::<f32>(),
-                      self.rows() * size_of::<f32>(),
+        cuda_memcpy2d(self.as_mut_ptr() as *mut c_void,
+                      self.leading_dimension() * size_of::<T>(),
+                      data.as_ptr() as *const c_void,
+                      data.leading_dimension() * size_of::<T>(),
+                      self.rows() * size_of::<T>(),
                       self.cols(),
                       cudaMemcpyKind::DeviceToDevice);
     }
 
     /// Initializes the matrix with 'value'.
-    fn init(&mut self, value: f32, stream: &CudaStream) {
-        unsafe {
-            MatrixKernel_init(self.as_mut_ptr(), self.leading_dimension() as i32,
-                              self.rows() as i32, self.cols() as i32, value, stream.stream);
-        }
-    }
+    fn init(&mut self, value: T, stream: &CudaStream);
 
     /// Add value to each matrix of the vector.
-    fn add_value(&mut self, value: f32, stream: &CudaStream) {
-        unsafe {
-            MatrixKernel_addValue(self.as_ptr(), self.leading_dimension() as i32,
-                                  self.as_mut_ptr(), self.leading_dimension() as i32,
-                                  self.rows() as i32, self.cols() as i32, value, stream.stream);
-        }
-    }
+    fn add_value(&mut self, value: T, stream: &CudaStream);
 
     /// Scale each element of the matrix by 'value'.
-    fn scale(&mut self, value: f32, stream: &CudaStream) {
-        unsafe {
-            MatrixKernel_scale(self.as_ptr(), self.leading_dimension() as i32,
-                               self.as_mut_ptr(), self.leading_dimension() as i32,
-                               self.rows() as i32, self.cols() as i32, value, stream.stream);
-        }
-    }
+    fn scl(&mut self, value: T, stream: &CudaStream);
 
     /// Add an other matrix to this one.
-    fn add(&mut self, to_add: &CuMatrixOp, stream: &CudaStream) {
-        #[cfg(not(feature = "disable_checks"))] {
-            assert_eq_usize(self.rows(), "self.rows()", to_add.rows(), "to_add.rows()");
-            assert_eq_usize(self.cols(), "self.cols()", to_add.cols(), "to_add.cols()");
-        }
-        unsafe {
-            MatrixKernel_add(self.as_ptr(), self.leading_dimension() as i32,
-                             to_add.as_ptr(), to_add.leading_dimension() as i32,
-                             self.as_mut_ptr(), self.leading_dimension() as i32,
-                             self.rows() as i32, self.cols() as i32, stream.stream)
-        }
-    }
+    fn add(&mut self, to_add: &CuMatrixOp<T>, stream: &CudaStream);
 
 }

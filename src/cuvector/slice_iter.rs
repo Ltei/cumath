@@ -3,17 +3,17 @@ use super::*;
 
 
 /// An iterator over a vector, returning vector slices.
-pub struct CuVectorSliceIter<'a> {
-    pub(crate) parent: PhantomData<&'a CuVectorOp>,
+pub struct CuVectorSliceIter<'a, T: CuDataType + 'a> {
+    pub(crate) _parent: PhantomData<&'a CuVectorOp<T>>,
     pub(crate) len: usize,
-    pub(crate) ptr: *const f32,
+    pub(crate) ptr: *const T,
 }
-impl<'a> CuVectorSliceIter<'a> {
+impl<'a, T: CuDataType + 'a> CuVectorSliceIter<'a, T> {
 
     #[inline]
-    pub fn len(&self) -> usize { self.len }
+    pub fn len(&self) -> usize { self.len as usize }
 
-    pub fn next<'b, 'c>(&'c mut self, len: usize) -> Option<CuVectorSlice<'b>> where 'a: 'b, 'b: 'c {
+    pub fn next<'b, 'c>(&'c mut self, len: usize) -> Option<CuVectorSlice<'b, T>> where 'a: 'b, 'b: 'c {
         match len <= self.len {
             true => {
                 let ptr = self.ptr;
@@ -24,7 +24,6 @@ impl<'a> CuVectorSliceIter<'a> {
             false => None
         }
     }
-
     pub fn skip(&mut self, len: usize) {
         if len <= self.len {
             self.ptr = unsafe { self.ptr.offset(len as isize) };
@@ -40,18 +39,17 @@ impl<'a> CuVectorSliceIter<'a> {
 
 
 /// An iterator over a mutable vector, returning mutable vector slices.
-pub struct CuVectorSliceIterMut<'a> {
-    pub(crate) parent: PhantomData<&'a CuVectorOpMut>,
+pub struct CuVectorSliceIterMut<'a, T: CuDataType + 'a> {
+    pub(crate) _parent: PhantomData<&'a CuVectorOpMut<T>>,
     pub(crate) len: usize,
-    pub(crate) ptr: *mut f32,
+    pub(crate) ptr: *mut T,
 }
-impl<'a> CuVectorSliceIterMut<'a> {
+impl<'a, T: CuDataType + 'a> CuVectorSliceIterMut<'a, T> {
 
     #[inline]
-    pub fn len(&self) -> usize { self.len }
+    pub fn len(&self) -> usize { self.len as usize }
 
-
-    pub fn next<'b, 'c>(&'c mut self, len: usize) -> Option<CuVectorSliceMut<'b>> where 'a: 'b, 'b: 'c {
+    pub fn next<'b, 'c>(&'c mut self, len: usize) -> Option<CuVectorSliceMut<'b, T>> where 'a: 'b, 'b: 'c {
         match len <= self.len {
             true => {
                 let ptr = self.ptr;

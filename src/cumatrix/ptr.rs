@@ -1,12 +1,15 @@
 
-use cuda_core::cuda::*;
+use super::*;
+use kernel::*;
+use cuda_core::{cuda_ffi::cudaMemcpyKind};
+use CuDataType;
 
 
-/// A pointer over a matrix : It won't free the inner GPU-pointer when it goes out of scope
-pub struct CuMatrixPtr {
-    pub(crate) deref: CuMatrixPtrDeref,
+/// A pointer over a continuous matrix : It won't free the inner GPU-pointer when it goes out of scope
+pub struct CuMatrixPtr<T: CuDataType> {
+    pub(crate) deref: CuMatrixPtrDeref<T>,
 }
-impl CuMatrixPtr {
+impl<T: CuDataType> CuMatrixPtr<T> {
 
     /// [inline]
     /// Returns the number of rows of the underlying matrix (even if the pointed memory has been freed)
@@ -32,25 +35,25 @@ impl CuMatrixPtr {
     /// [inline]
     /// Returns an immutable reference to the underlying matrix
     #[inline]
-    pub unsafe fn deref(&self) -> &CuMatrixPtrDeref {
+    pub unsafe fn deref(&self) -> &CuMatrixPtrDeref<T> {
         &self.deref
     }
 
     /// [inline]
     /// Returns an mutable reference to the underlying matrix
     #[inline]
-    pub unsafe fn deref_mut(&mut self) -> &mut CuMatrixPtrDeref {
+    pub unsafe fn deref_mut(&mut self) -> &mut CuMatrixPtrDeref<T> {
         &mut self.deref
     }
 
 }
 
 
-pub struct CuMatrixPtrDeref {
+pub struct CuMatrixPtrDeref<T: CuDataType> {
+    pub(crate) ptr: *mut T,
+    pub(crate) len: usize,
     pub(crate) rows: usize,
     pub(crate) cols: usize,
-    pub(crate) len: usize,
-    pub(crate) ptr: *mut f32,
 }
-impl_CuPackedDataMut!(CuMatrixPtrDeref);
-impl_CuMatrixOpMut_packed!(CuMatrixPtrDeref);
+
+impl_mutable_packed_matrix_holder!(CuMatrixPtrDeref);
