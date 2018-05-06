@@ -61,9 +61,9 @@ fn main() {
     let value1 = 1.185254;
 
     // Create a vector containing [value0, value0, value0, value0, value0]
-    let mut vector0 = CuVector::new(5, value0);
+    let mut vector0 = CuVector::<f32>::new(value0, 5);
     // Create a vector containing [value1]
-    let vector1 = CuVector::new(1, value1);
+    let vector1 = CuVector::<f32>::new(value1, 1);
 
     {
         // Borrow a slice of vector0 with offset 2 and length 1
@@ -103,12 +103,12 @@ fn main() {
     let cublas = Cublas::new().unwrap();
 
     // Create a 2*2 Matrix containing [2.0, -1.0, 0.0, 1.0] (matrices are row-ordered)
-    let matrix1 = CuMatrix::from_data(2, 2, &[1.0, 2.0, -2.0, 4.0]);
+    let matrix1 = CuMatrix::from_host_data(2, 2, &[1.0, 2.0, -2.0, 4.0]);
     // Create a 2*2 Matrix containing [2.0, -1.0, 0.0, 1.0]
-    let matrix2 = CuMatrix::from_data(2, 2, &[2.0, -1.0, 0.0, 1.0]);
+    let matrix2 = CuMatrix::from_host_data(2, 2, &[2.0, -1.0, 0.0, 1.0]);
 
     // Create a Zero 2*2 Matrix
-    let mut output = CuMatrix::new(2, 2, 0.0);
+    let mut output = CuMatrix::<f32>::zero(2, 2);
 
     // Matrix-Matrix multiplication
     cublas.mult_m_m(&matrix1, &matrix2, &mut output);
