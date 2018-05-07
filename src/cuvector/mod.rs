@@ -55,7 +55,7 @@ pub trait CuVectorOp<T: CuDataType>: fmt::Debug {
     }
 
     fn matrix_slice<'a>(&'a self, offset: usize, rows: usize, cols: usize) -> ::CuMatrixSlice<'a, T> {
-        if offset + rows * cols >= self.len() { panic!() }
+        if offset + rows * cols > self.len() { panic!() }
         ::CuMatrixSlice {
             _parent: PhantomData,
             ptr: unsafe { self.as_ptr().offset(offset as isize) },
@@ -157,7 +157,7 @@ pub trait CuVectorOpMut<T: CuDataType>: CuVectorOp<T> {
     }
 
     fn matrix_slice_mut<'a>(&'a mut self, offset: usize, rows: usize, cols: usize) -> ::CuMatrixSliceMut<'a, T> {
-        if offset + rows * cols >= self.len() { panic!() }
+        if offset + rows * cols > self.len() { panic!() }
         ::CuMatrixSliceMut {
             _parent: PhantomData,
             ptr: unsafe { self.as_mut_ptr().offset(offset as isize) },

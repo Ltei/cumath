@@ -24,6 +24,18 @@ impl<'a, T: CuDataType + 'a> CuVectorSliceIter<'a, T> {
             false => None
         }
     }
+    pub fn next_matrix<'b, 'c>(&'c mut self, rows: usize, cols: usize) -> Option<::CuMatrixSlice<'b, T>> where 'a: 'b, 'b: 'c {
+        let len = rows * cols;
+        match len <= self.len {
+            true => {
+                let ptr = self.ptr;
+                self.ptr = unsafe { self.ptr.offset(len as isize) };
+                self.len -= len;
+                Some(::CuMatrixSlice { _parent: PhantomData, ptr, len, rows, cols })
+            }
+            false => None
+        }
+    }
     pub fn skip(&mut self, len: usize) {
         if len <= self.len {
             self.ptr = unsafe { self.ptr.offset(len as isize) };
@@ -56,6 +68,18 @@ impl<'a, T: CuDataType + 'a> CuVectorSliceIterMut<'a, T> {
                 self.ptr = unsafe { self.ptr.offset(len as isize) };
                 self.len -= len;
                 Some(CuVectorSliceMut { _parent: PhantomData, len, ptr })
+            }
+            false => None
+        }
+    }
+    pub fn next_matrix<'b, 'c>(&'c mut self, rows: usize, cols: usize) -> Option<::CuMatrixSliceMut<'b, T>> where 'a: 'b, 'b: 'c {
+        let len = rows * cols;
+        match len <= self.len {
+            true => {
+                let ptr = self.ptr;
+                self.ptr = unsafe { self.ptr.offset(len as isize) };
+                self.len -= len;
+                Some(::CuMatrixSliceMut { _parent: PhantomData, ptr, len, rows, cols })
             }
             false => None
         }

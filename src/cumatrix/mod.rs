@@ -44,6 +44,14 @@ pub trait CuMatrixOp<T: CuDataType>: fmt::Debug {
     #[inline]
     fn leading_dimension(&self) -> usize;
 
+    fn as_vector(&self) -> ::CuVectorSlice<T> {
+        ::CuVectorSlice {
+            _parent: PhantomData,
+            ptr: self.as_ptr(),
+            len: self.len(),
+        }
+    }
+
     /// Returns an immutable sub-matrix.
     fn slice<'a>(&'a self, row_offset: usize, col_offset: usize, nb_rows: usize, nb_cols: usize) -> CuMatrixFragment<'a, T> {
         #[cfg(not(feature = "disable_checks"))] {
@@ -102,6 +110,14 @@ pub trait CuMatrixOpMut<T: CuDataType>: CuMatrixOp<T>  {
     /// Supertrait upcasting
     #[inline]
     fn as_immutable(&self) -> &CuMatrixOp<T>;
+
+    fn as_mut_vector(&mut self) -> ::CuVectorSliceMut<T> {
+        ::CuVectorSliceMut {
+            _parent: PhantomData,
+            ptr: self.as_mut_ptr(),
+            len: self.len(),
+        }
+    }
 
     /// Returns a mutable sub-matrix.
     fn slice_mut<'a>(&'a mut self, row_offset: usize, col_offset: usize, nb_rows: usize, nb_cols: usize) -> CuMatrixFragmentMut<'a, T> {
