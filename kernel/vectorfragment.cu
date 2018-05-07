@@ -352,7 +352,7 @@ __global__ void sigmoidDeriv_f32 (float* vector, int vector_ld, float* output, i
 	int row = blockIdx.x * blockDim.x + threadIdx.x;
 	int col = blockIdx.y * blockDim.y + threadIdx.y;
 	if (row < rows && col < cols) {
-float tmp = vector[row+col*vector_ld];   float tmp2 = 1.0 + (tmp < 0.0 ? -tmp : tmp);   output[row+col*output_ld] = 0.5 / (tmp2*tmp2);
+float tmp = 1.0 + (vector[row+col*vector_ld] < 0.0 ? -vector[row+col*vector_ld] : vector[row+col*vector_ld]);   output[row+col*output_ld] = - 0.5 / (tmp*tmp);
 	}
 }
 extern "C" {
