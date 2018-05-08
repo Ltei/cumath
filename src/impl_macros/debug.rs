@@ -35,7 +35,11 @@ macro_rules! impl_Debug_matrix_packed {
                         for col in 0..self.cols()-1 {
                             write!(f, "{}, ", buffer[row+col*self.rows()])?;
                         }
-                        write!(f, "{}]\n", buffer[row+(self.cols()-1)*self.rows()])?;
+                        if row == self.rows()-1 {
+                            write!(f, "{}]", buffer[row+(self.cols()-1)*self.rows()])?;
+                        } else {
+                            write!(f, "{}]\n", buffer[row+(self.cols()-1)*self.rows()])?;
+                        }
                     }
                 }
                 Ok(())
@@ -58,7 +62,11 @@ macro_rules! impl_Debug_matrix_fragmented {
                         for col in 0..self.cols()-1 {
                             write!(f, "{}, ", buffer[row+col*self.rows()])?;
                         }
-                        write!(f, "{}]\n", buffer[row+(self.cols()-1)*self.rows()])?;
+                        if row == self.rows()-1 {
+                            write!(f, "{}]", buffer[row+(self.cols()-1)*self.rows()])?;
+                        } else {
+                            write!(f, "{}]\n", buffer[row+(self.cols()-1)*self.rows()])?;
+                        }
                     }
                 }
                 Ok(())
