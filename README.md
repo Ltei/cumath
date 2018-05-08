@@ -103,7 +103,7 @@ fn main() {
     // Create an instance of CuBLAS
     let cublas = Cublas::new().unwrap();
 
-    // Create a 2*2 Matrix containing [2.0, -1.0, 0.0, 1.0] (matrices are row-ordered)
+    // Create a 2*2 Matrix containing [1.0, 2.0, -2.0, 4.0] (matrices are row-ordered)
     let matrix1 = CuMatrix::from_host_data(2, 2, &[1.0, 2.0, -2.0, 4.0]);
     // Create a 2*2 Matrix containing [2.0, -1.0, 0.0, 1.0]
     let matrix2 = CuMatrix::from_host_data(2, 2, &[2.0, -1.0, 0.0, 1.0]);
