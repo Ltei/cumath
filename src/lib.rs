@@ -1,6 +1,4 @@
 
-#[macro_use]
-pub(crate) mod impl_macros;
 
 mod meta;
 mod cuda_core;

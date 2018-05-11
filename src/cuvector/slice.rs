@@ -1,23 +1,35 @@
 
 
 use super::*;
+use std::{ops::{Deref, DerefMut}};
 
 
 /// A vector slice.
 /// Holds a pointer to continuous GPU memory.
+#[derive(Debug)]
 pub struct CuVectorSlice<'a, T: CuDataType + 'a> {
-    pub(crate) _parent: PhantomData<&'a CuVectorOp<T>>,
-    pub(crate) len: usize,
-    pub(crate) ptr: *const T,
+    pub(crate) _parent: PhantomData<&'a CuVectorDeref<T>>,
+    pub(crate) deref: CuVectorDeref<T>,
 }
-impl_immutable_vector_holder!(CuVectorSlice, 'a);
+
+impl<'a, T: CuDataType + 'a> Deref for CuVectorSlice<'a, T> {
+    type Target = CuVectorDeref<T>;
+    fn deref(&self) -> &CuVectorDeref<T> { &self.deref }
+}
 
 
 /// A mutable vector slice.
 /// Holds a pointer to continuous GPU memory.
+#[derive(Debug)]
 pub struct CuVectorSliceMut<'a, T: CuDataType + 'a> {
-    pub(crate) _parent: PhantomData<&'a CuVectorOp<T>>, // TODO Should be CuVectorOpMut<T>
-    pub(crate) len: usize,
-    pub(crate) ptr: *mut T,
+    pub(crate) _parent: PhantomData<&'a CuVectorDeref<T>>,
+    pub(crate) deref: CuVectorDeref<T>,
 }
-impl_mutable_vector_holder!(CuVectorSliceMut, 'a);
+
+impl<'a, T: CuDataType + 'a> Deref for CuVectorSliceMut<'a, T> {
+    type Target = CuVectorDeref<T>;
+    fn deref(&self) -> &CuVectorDeref<T> { &self.deref }
+}
+impl<'a, T: CuDataType + 'a> DerefMut for CuVectorSliceMut<'a, T> {
+    fn deref_mut(&mut self) -> &mut CuVectorDeref<T> { &mut self.deref }
+}

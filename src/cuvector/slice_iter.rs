@@ -4,9 +4,9 @@ use super::*;
 
 /// An iterator over a vector, returning vector slices.
 pub struct CuVectorSliceIter<'a, T: CuDataType + 'a> {
-    pub(crate) _parent: PhantomData<&'a CuVectorOp<T>>,
+    pub(crate) _parent: PhantomData<&'a CuVectorDeref<T>>,
     pub(crate) len: usize,
-    pub(crate) ptr: *const T,
+    pub(crate) ptr: *mut T,
 }
 impl<'a, T: CuDataType + 'a> CuVectorSliceIter<'a, T> {
 
@@ -19,7 +19,13 @@ impl<'a, T: CuDataType + 'a> CuVectorSliceIter<'a, T> {
                 let ptr = self.ptr;
                 self.ptr = unsafe { self.ptr.offset(len as isize) };
                 self.len -= len;
-                Some(CuVectorSlice { _parent: PhantomData, len, ptr })
+                Some(CuVectorSlice {
+                    _parent: PhantomData,
+                    deref: CuVectorDeref {
+                        len,
+                        ptr
+                    }
+                })
             }
             false => None
         }
@@ -31,7 +37,16 @@ impl<'a, T: CuDataType + 'a> CuVectorSliceIter<'a, T> {
                 let ptr = self.ptr;
                 self.ptr = unsafe { self.ptr.offset(len as isize) };
                 self.len -= len;
-                Some(::CuMatrixSlice { _parent: PhantomData, ptr, len, rows, cols })
+                Some(::CuMatrixSlice {
+                    _parent: PhantomData,
+                    deref: ::CuMatrixDeref {
+                        ptr,
+                        len,
+                        rows,
+                        cols,
+                        leading_dimension: rows,
+                    }
+                })
             }
             false => None
         }
@@ -52,7 +67,7 @@ impl<'a, T: CuDataType + 'a> CuVectorSliceIter<'a, T> {
 
 /// An iterator over a mutable vector, returning mutable vector slices.
 pub struct CuVectorSliceIterMut<'a, T: CuDataType + 'a> {
-    pub(crate) _parent: PhantomData<&'a CuVectorOpMut<T>>,
+    pub(crate) _parent: PhantomData<&'a CuVectorDeref<T>>,
     pub(crate) len: usize,
     pub(crate) ptr: *mut T,
 }
@@ -67,7 +82,13 @@ impl<'a, T: CuDataType + 'a> CuVectorSliceIterMut<'a, T> {
                 let ptr = self.ptr;
                 self.ptr = unsafe { self.ptr.offset(len as isize) };
                 self.len -= len;
-                Some(CuVectorSliceMut { _parent: PhantomData, len, ptr })
+                Some(CuVectorSliceMut {
+                    _parent: PhantomData,
+                    deref: CuVectorDeref {
+                        len,
+                        ptr,
+                    }
+                })
             }
             false => None
         }
@@ -79,7 +100,16 @@ impl<'a, T: CuDataType + 'a> CuVectorSliceIterMut<'a, T> {
                 let ptr = self.ptr;
                 self.ptr = unsafe { self.ptr.offset(len as isize) };
                 self.len -= len;
-                Some(::CuMatrixSliceMut { _parent: PhantomData, ptr, len, rows, cols })
+                Some(::CuMatrixSliceMut {
+                    _parent: PhantomData,
+                    deref: ::CuMatrixDeref {
+                        ptr,
+                        len,
+                        rows,
+                        cols,
+                        leading_dimension: rows,
+                    }
+                })
             }
             false => None
         }

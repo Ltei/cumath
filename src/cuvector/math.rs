@@ -9,17 +9,17 @@ pub struct CuVectorMath<T: CuDataType> {
 impl CuVectorMath<i32> {
 
     /// output[i] = vector[i] + value
-    pub fn add_value(vector: &CuVectorOp<i32>, value: i32, output: &mut CuVectorOpMut<i32>, stream: &CudaStream) {
+    pub fn add_value(vector: &CuVectorDeref<i32>, value: i32, output: &mut CuVectorDeref<i32>, stream: &CudaStream) {
         unsafe { VectorPacked_addValue_i32(vector.as_ptr(), value, output.as_mut_ptr(), vector.len() as i32, stream.stream) }
     }
 
     /// output[i] = vector[i] * value
-    pub fn scale(vector: &CuVectorOp<i32>, value: i32, output: &mut CuVectorOpMut<i32>, stream: &CudaStream) {
+    pub fn scale(vector: &CuVectorDeref<i32>, value: i32, output: &mut CuVectorDeref<i32>, stream: &CudaStream) {
         unsafe { VectorPacked_scl_i32(vector.as_ptr(), value, output.as_mut_ptr(), vector.len() as i32, stream.stream) }
     }
 
     /// output[i] = left_op[i] + right_op[i]
-    pub fn add(left_op: &CuVectorOp<i32>, right_op: &CuVectorOp<i32>, output: &mut CuVectorOpMut<i32>, stream: &CudaStream) {
+    pub fn add(left_op: &CuVectorDeref<i32>, right_op: &CuVectorDeref<i32>, output: &mut CuVectorDeref<i32>, stream: &CudaStream) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(left_op.len(), "left_op.len()", right_op.len(), "right_op.len()");
             assert_eq_usize(left_op.len(), "left_op.len()", output.len(), "output.len()");
@@ -28,7 +28,7 @@ impl CuVectorMath<i32> {
     }
 
     /// output[i] = left_op[i] - right_op[i]
-    pub fn sub(left_op: &CuVectorOp<i32>, right_op: &CuVectorOp<i32>, output: &mut CuVectorOpMut<i32>, stream: &CudaStream) {
+    pub fn sub(left_op: &CuVectorDeref<i32>, right_op: &CuVectorDeref<i32>, output: &mut CuVectorDeref<i32>, stream: &CudaStream) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(left_op.len(), "left_op.len()", right_op.len(), "right_op.len()");
             assert_eq_usize(left_op.len(), "left_op.len()", output.len(), "output.len()");
@@ -40,7 +40,7 @@ impl CuVectorMath<i32> {
     }
 
     /// output[i] = left_op[i] * right_op[i]
-    pub fn mult(left_op: &CuVectorOp<i32>, right_op: &CuVectorOp<i32>, output: &mut CuVectorOpMut<i32>, stream: &CudaStream) {
+    pub fn mult(left_op: &CuVectorDeref<i32>, right_op: &CuVectorDeref<i32>, output: &mut CuVectorDeref<i32>, stream: &CudaStream) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(left_op.len(), "left_op.len()", right_op.len(), "right_op.len()");
             assert_eq_usize(left_op.len(), "left_op.len()", output.len(), "output.len()");
@@ -53,12 +53,12 @@ impl CuVectorMath<i32> {
 
 
     /// y[i] = a*y[i]+b
-    pub fn aypb(a: i32, b: i32, y: &mut CuVectorOpMut<i32>, stream: &CudaStream) {
+    pub fn aypb(a: i32, b: i32, y: &mut CuVectorDeref<i32>, stream: &CudaStream) {
         unsafe { VectorPacked_aypb_i32(a, y.as_mut_ptr(), b, y.len() as i32, stream.stream) }
     }
 
     /// y[i] *= (a*x[i])+b
-    pub fn axpb_y(a: i32, x: &CuVectorOp<i32>, b: i32, y: &mut CuVectorOpMut<i32>, stream: &CudaStream) {
+    pub fn axpb_y(a: i32, x: &CuVectorDeref<i32>, b: i32, y: &mut CuVectorDeref<i32>, stream: &CudaStream) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(x.len(), "x.len()", y.len(), "y.len()");
         }
@@ -66,7 +66,7 @@ impl CuVectorMath<i32> {
     }
 
     /// y[i] += x[i] * v[i]
-    pub fn xvpy(x: &CuVectorOp<i32>, v: &CuVectorOp<i32>, y: &mut CuVectorOpMut<i32>, stream: &CudaStream) {
+    pub fn xvpy(x: &CuVectorDeref<i32>, v: &CuVectorDeref<i32>, y: &mut CuVectorDeref<i32>, stream: &CudaStream) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(x.len(), "x.len()", v.len(), "v.len()");
             assert_eq_usize(x.len(), "x.len()", y.len(), "y.len()");
@@ -75,7 +75,7 @@ impl CuVectorMath<i32> {
     }
 
     /// y[i] += x[i] * (a*v[i]+b)
-    pub fn x_avpb_py(x: &CuVectorOp<i32>, a: i32, v: &CuVectorOp<i32>, b: i32, y: &mut CuVectorOpMut<i32>, stream: &CudaStream) {
+    pub fn x_avpb_py(x: &CuVectorDeref<i32>, a: i32, v: &CuVectorDeref<i32>, b: i32, y: &mut CuVectorDeref<i32>, stream: &CudaStream) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(x.len(), "x.len()", v.len(), "v.len()");
             assert_eq_usize(x.len(), "x.len()", y.len(), "y.len()");
@@ -88,17 +88,17 @@ impl CuVectorMath<i32> {
 impl CuVectorMath<f32> {
 
     /// output[i] = vector[i] + value
-    pub fn add_value(vector: &CuVectorOp<f32>, value: f32, output: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
+    pub fn add_value(vector: &CuVectorDeref<f32>, value: f32, output: &mut CuVectorDeref<f32>, stream: &CudaStream) {
         unsafe { VectorPacked_addValue_f32(vector.as_ptr(), value, output.as_mut_ptr(), vector.len() as i32, stream.stream) }
     }
 
     /// output[i] = vector[i] * value
-    pub fn scale(vector: &CuVectorOp<f32>, value: f32, output: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
+    pub fn scale(vector: &CuVectorDeref<f32>, value: f32, output: &mut CuVectorDeref<f32>, stream: &CudaStream) {
         unsafe { VectorPacked_scl_f32(vector.as_ptr(), value, output.as_mut_ptr(), vector.len() as i32, stream.stream) }
     }
 
     /// output[i] = left_op[i] + right_op[i]
-    pub fn add(left_op: &CuVectorOp<f32>, right_op: &CuVectorOp<f32>, output: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
+    pub fn add(left_op: &CuVectorDeref<f32>, right_op: &CuVectorDeref<f32>, output: &mut CuVectorDeref<f32>, stream: &CudaStream) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(left_op.len(), "left_op.len()", right_op.len(), "right_op.len()");
             assert_eq_usize(left_op.len(), "left_op.len()", output.len(), "output.len()");
@@ -107,7 +107,7 @@ impl CuVectorMath<f32> {
     }
 
     /// output[i] = left_op[i] - right_op[i]
-    pub fn sub(left_op: &CuVectorOp<f32>, right_op: &CuVectorOp<f32>, output: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
+    pub fn sub(left_op: &CuVectorDeref<f32>, right_op: &CuVectorDeref<f32>, output: &mut CuVectorDeref<f32>, stream: &CudaStream) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(left_op.len(), "left_op.len()", right_op.len(), "right_op.len()");
             assert_eq_usize(left_op.len(), "left_op.len()", output.len(), "output.len()");
@@ -119,7 +119,7 @@ impl CuVectorMath<f32> {
     }
 
     /// output[i] = left_op[i] * right_op[i]
-    pub fn mult(left_op: &CuVectorOp<f32>, right_op: &CuVectorOp<f32>, output: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
+    pub fn mult(left_op: &CuVectorDeref<f32>, right_op: &CuVectorDeref<f32>, output: &mut CuVectorDeref<f32>, stream: &CudaStream) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(left_op.len(), "left_op.len()", right_op.len(), "right_op.len()");
             assert_eq_usize(left_op.len(), "left_op.len()", output.len(), "output.len()");
@@ -132,12 +132,12 @@ impl CuVectorMath<f32> {
 
 
     /// y[i] = a*y[i]+b
-    pub fn aypb(a: f32, b: f32, y: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
+    pub fn aypb(a: f32, b: f32, y: &mut CuVectorDeref<f32>, stream: &CudaStream) {
         unsafe { VectorPacked_aypb_f32(a, y.as_mut_ptr(), b, y.len() as i32, stream.stream) }
     }
 
     /// y[i] *= (a*x[i])+b
-    pub fn axpb_y(a: f32, x: &CuVectorOp<f32>, b: f32, y: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
+    pub fn axpb_y(a: f32, x: &CuVectorDeref<f32>, b: f32, y: &mut CuVectorDeref<f32>, stream: &CudaStream) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(x.len(), "x.len()", y.len(), "y.len()");
         }
@@ -145,7 +145,7 @@ impl CuVectorMath<f32> {
     }
 
     /// y[i] += x[i] * v[i]
-    pub fn xvpy(x: &CuVectorOp<f32>, v: &CuVectorOp<f32>, y: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
+    pub fn xvpy(x: &CuVectorDeref<f32>, v: &CuVectorDeref<f32>, y: &mut CuVectorDeref<f32>, stream: &CudaStream) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(x.len(), "x.len()", v.len(), "v.len()");
             assert_eq_usize(x.len(), "x.len()", y.len(), "y.len()");
@@ -154,7 +154,7 @@ impl CuVectorMath<f32> {
     }
 
     /// y[i] += x[i] * (a*v[i]+b)
-    pub fn x_avpb_py(x: &CuVectorOp<f32>, a: f32, v: &CuVectorOp<f32>, b: f32, y: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
+    pub fn x_avpb_py(x: &CuVectorDeref<f32>, a: f32, v: &CuVectorDeref<f32>, b: f32, y: &mut CuVectorDeref<f32>, stream: &CudaStream) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(x.len(), "x.len()", v.len(), "v.len()");
             assert_eq_usize(x.len(), "x.len()", y.len(), "y.len()");
@@ -164,78 +164,54 @@ impl CuVectorMath<f32> {
 
 
     /// output[i] = sigmoid(vector[i])
-    pub fn sigmoid(vector: &CuVectorOp<f32>, output: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
+    pub fn sigmoid(vector: &CuVectorDeref<f32>, output: &mut CuVectorDeref<f32>, stream: &CudaStream) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(vector.len(), "vector.len()", output.len(), "output.len()");
         }
         unsafe { VectorPacked_sigmoid_f32(vector.as_ptr(), output.as_mut_ptr(), vector.len() as i32, stream.stream) }
     }
-    /// vector[i] = sigmoid(vector[i])
-    pub fn sigmoid_self(vector: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
-        unsafe { VectorPacked_sigmoid_f32(vector.as_ptr(), vector.as_mut_ptr(), vector.len() as i32, stream.stream) }
-    }
 
     /// output[i] = sigmoid_deriv(vector[i])
-    pub fn sigmoid_deriv(vector: &CuVectorOp<f32>, output: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
+    pub fn sigmoid_deriv(vector: &CuVectorDeref<f32>, output: &mut CuVectorDeref<f32>, stream: &CudaStream) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(vector.len(), "vector.len()", output.len(), "output.len()");
         }
         unsafe { VectorPacked_sigmoidDeriv_f32(vector.as_ptr(), output.as_mut_ptr(), vector.len() as i32, stream.stream) }
     }
-    /// vector[i] = sigmoid_deriv(vector[i])
-    pub fn sigmoid_deriv_self(vector: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
-        unsafe { VectorPacked_sigmoidDeriv_f32(vector.as_ptr(), vector.as_mut_ptr(), vector.len() as i32, stream.stream) }
-    }
 
     /// output[i] = tanh(vector[i])
-    pub fn tanh(vector: &CuVectorOp<f32>, output: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
+    pub fn tanh(vector: &CuVectorDeref<f32>, output: &mut CuVectorDeref<f32>, stream: &CudaStream) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(vector.len(), "vector.len()", output.len(), "output.len()");
         }
         unsafe { VectorPacked_tanh_f32(vector.as_ptr(), output.as_mut_ptr(), vector.len() as i32, stream.stream) }
     }
-    /// vector[i] = tanh(vector[i])
-    pub fn tanh_self(vector: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
-        unsafe { VectorPacked_tanh_f32(vector.as_ptr(), vector.as_mut_ptr(), vector.len() as i32, stream.stream) }
-    }
 
     /// output[i] = tanh(vector[i])
-    pub fn tanh_deriv(vector: &CuVectorOp<f32>, output: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
+    pub fn tanh_deriv(vector: &CuVectorDeref<f32>, output: &mut CuVectorDeref<f32>, stream: &CudaStream) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(vector.len(), "vector.len()", output.len(), "output.len()");
         }
         unsafe { VectorPacked_tanhDeriv_f32(vector.as_ptr(), output.as_mut_ptr(), vector.len() as i32, stream.stream) }
     }
-    /// vector[i] = tanh(vector[i])
-    pub fn tanh_deriv_self(vector: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
-        unsafe { VectorPacked_tanhDeriv_f32(vector.as_ptr(), vector.as_mut_ptr(), vector.len() as i32, stream.stream) }
-    }
 
     /// output[i] = tanh(vector[i])
-    pub fn relu(vector: &CuVectorOp<f32>, output: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
+    pub fn relu(vector: &CuVectorDeref<f32>, output: &mut CuVectorDeref<f32>, stream: &CudaStream) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(vector.len(), "vector.len()", output.len(), "output.len()");
         }
         unsafe { VectorPacked_relu_f32(vector.as_ptr(), output.as_mut_ptr(), vector.len() as i32, stream.stream) }
     }
-    /// vector[i] = tanh(vector[i])
-    pub fn relu_self(vector: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
-        unsafe { VectorPacked_relu_f32(vector.as_ptr(), vector.as_mut_ptr(), vector.len() as i32, stream.stream) }
-    }
 
     /// output[i] = tanh(vector[i])
-    pub fn relu_deriv(vector: &CuVectorOp<f32>, output: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
+    pub fn relu_deriv(vector: &CuVectorDeref<f32>, output: &mut CuVectorDeref<f32>, stream: &CudaStream) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(vector.len(), "vector.len()", output.len(), "output.len()");
         }
         unsafe { VectorPacked_reluDeriv_f32(vector.as_ptr(), output.as_mut_ptr(), vector.len() as i32, stream.stream) }
     }
-    /// vector[i] = tanh(vector[i])
-    pub fn relu_deriv_self(vector: &mut CuVectorOpMut<f32>, stream: &CudaStream) {
-        unsafe { VectorPacked_reluDeriv_f32(vector.as_ptr(), vector.as_mut_ptr(), vector.len() as i32, stream.stream) }
-    }
 
-    pub fn custom_error_calc(vector: &mut CuVectorOpMut<f32>, ideal_vector: &CuVectorOp<f32>, threshold: f32, scale_foff: f32, scale_fon: f32, stream: &CudaStream) {
+    pub fn custom_error_calc(vector: &mut CuVectorDeref<f32>, ideal_vector: &CuVectorDeref<f32>, threshold: f32, scale_foff: f32, scale_fon: f32, stream: &CudaStream) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(vector.len(), "vector.len()", ideal_vector.len(), "ideal_vector.len()");
         }

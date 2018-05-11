@@ -2,7 +2,7 @@
 use std::ptr;
 
 use super::{cuda::*, curand_ffi::*};
-use cuvector::{CuVectorOpMut};
+use cuvector::CuVectorDeref;
 use meta::result::*;
 
 pub use super::curand_ffi::CurandRngType;
@@ -32,11 +32,11 @@ impl CurandGenerator {
         curand_set_stream(self.handle, stream.stream);
     }
 
-    pub fn generate_uniform(&mut self, output: &mut CuVectorOpMut<f32>) {
+    pub fn generate_uniform(&mut self, output: &mut CuVectorDeref<f32>) {
         curand_generate_uniform(self.handle, output.as_mut_ptr(), output.len());
     }
 
-    pub fn generate_uniform_range(&mut self, output: &mut CuVectorOpMut<f32>, min: f32, max: f32, stream: &CudaStream) {
+    pub fn generate_uniform_range(&mut self, output: &mut CuVectorDeref<f32>, min: f32, max: f32, stream: &CudaStream) {
         #[cfg(not(feature = "disable_checks"))] {
             assert!(min <= max, "min > max");
         }
@@ -46,21 +46,21 @@ impl CurandGenerator {
         }
     }
 
-    pub fn generate_normal(&mut self, output: &mut CuVectorOpMut<f32>, mean: f32, stddev: f32) {
+    pub fn generate_normal(&mut self, output: &mut CuVectorDeref<f32>, mean: f32, stddev: f32) {
         #[cfg(not(feature = "disable_checks"))] {
             assert!(stddev >= 0.0, "stddev < 0.0");
         }
         curand_generate_normal(self.handle, output.as_mut_ptr(), output.len(), mean, stddev);
     }
 
-    pub fn generate_lognormal(&mut self, output: &mut CuVectorOpMut<f32>, mean: f32, stddev: f32) {
+    pub fn generate_lognormal(&mut self, output: &mut CuVectorDeref<f32>, mean: f32, stddev: f32) {
         #[cfg(not(feature = "disable_checks"))] {
             assert!(stddev >= 0.0, "stddev < 0.0");
         }
         curand_generate_lognormal(self.handle, output.as_mut_ptr(), output.len(), mean, stddev);
     }
 
-    pub fn generate_poisson(&mut self, output: &mut CuVectorOpMut<f32>, lambda: f32) {
+    pub fn generate_poisson(&mut self, output: &mut CuVectorDeref<f32>, lambda: f32) {
         #[cfg(not(feature = "disable_checks"))] {
             assert!(lambda >= 0.0, "lambda < 0.0");
         }
@@ -72,7 +72,7 @@ impl CurandGenerator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cuvector::{CuVector, CuVectorOp};
+    use cuvector::*;
 
     #[test]
     fn curand_generate_uniform() {

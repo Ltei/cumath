@@ -1,20 +1,26 @@
 
-use std::{ptr, mem::size_of};
-
+use std::{ptr, mem::size_of, ops::{Deref, DerefMut}};
 use super::*;
-use kernel::*;
+
 
 
 /// A GPU-allocated matrix
 /// Holds a pointer to continuous GPU memory.
+#[derive(Debug)]
 pub struct CuMatrix<T: CuDataType> {
-    ptr: *mut T,
-    len: usize,
-    rows: usize,
-    cols: usize,
+    deref: CuMatrixDeref<T>
 }
+
 impl<T: CuDataType> Drop for CuMatrix<T> {
-    fn drop(&mut self) { cuda_free(self.ptr as *mut c_void) }
+    fn drop(&mut self) { cuda_free(self.deref.ptr as *mut c_void) }
+}
+
+impl<T: CuDataType> Deref for CuMatrix<T> {
+    type Target = CuMatrixDeref<T>;
+    fn deref(&self) -> &CuMatrixDeref<T> { &self.deref }
+}
+impl<T: CuDataType> DerefMut for CuMatrix<T> {
+    fn deref_mut(&mut self) -> &mut CuMatrixDeref<T> { &mut self.deref }
 }
 
 macro_rules! impl_CuMatrix {
@@ -26,7 +32,7 @@ macro_rules! impl_CuMatrix {
                 let mut ptr = ptr::null_mut();
                 cuda_malloc(&mut ptr, len * size_of::<$inner_type>());
                 unsafe { $fn_init(ptr as *mut $inner_type, $inner_type::zero(), len as i32, DEFAULT_STREAM.stream) }
-                CuMatrix { rows, cols, len, ptr: ptr as *mut $inner_type }
+                CuMatrix { deref: CuMatrixDeref { rows, cols, len, ptr: ptr as *mut $inner_type, leading_dimension: rows } }
             }
             /// Returns a new GPU-allocated matrix from a dimension and an initial value.
             pub fn new(value: $inner_type, rows: usize, cols: usize) -> CuMatrix<$inner_type> {
@@ -34,20 +40,7 @@ macro_rules! impl_CuMatrix {
                 let mut ptr = ptr::null_mut();
                 cuda_malloc(&mut ptr, len * size_of::<$inner_type>());
                 unsafe { $fn_init(ptr as *mut $inner_type, value, len as i32, DEFAULT_STREAM.stream) }
-                CuMatrix { rows, cols, len, ptr: ptr as *mut $inner_type }
-            }
-            /// Returns a new mutable slice
-            pub fn slice_col_mut<'a>(&'a mut self, col_offset: usize, nb_cols: usize) -> CuMatrixSliceMut<'a, $inner_type> {
-                #[cfg(not(feature = "disable_checks"))] {
-                    assert_infeq_usize(col_offset + nb_cols, "col_offset+nb_cols", self.cols(), "self.cols()");
-                }
-                CuMatrixSliceMut {
-                    _parent: PhantomData,
-                    rows: self.leading_dimension(),
-                    cols: nb_cols,
-                    len: self.rows * nb_cols,
-                    ptr: unsafe { self.ptr.offset((col_offset*self.rows) as isize) },
-                }
+                CuMatrix { deref: CuMatrixDeref { rows, cols, len, ptr: ptr as *mut $inner_type, leading_dimension: rows } }
             }
         }
     };
@@ -55,7 +48,6 @@ macro_rules! impl_CuMatrix {
 
 impl_CuMatrix!(i32, VectorPacked_init_i32);
 impl_CuMatrix!(f32, VectorPacked_init_f32);
-impl_mutable_packed_matrix_holder!(CuMatrix);
 
 impl<T: CuDataType> CuMatrix<T> {
 
@@ -66,21 +58,30 @@ impl<T: CuDataType> CuMatrix<T> {
         cuda_malloc(&mut ptr, data.len() * size_of::<T>());
         cuda_memcpy(ptr, data.as_ptr() as *const c_void, data.len() * size_of::<T>(), cudaMemcpyKind::HostToDevice);
         CuMatrix {
-            ptr: ptr as *mut T,
-            len, rows, cols
+            deref: CuMatrixDeref {
+                ptr: ptr as *mut T,
+                len,
+                rows,
+                cols,
+                leading_dimension: rows,
+            }
         }
     }
     /// Returns a new GPU-allocated matrix from CPU data.
-    pub fn from_device_data(data: &CuMatrixOp<T>) -> CuMatrix<T> {
+    pub fn from_device_data(data: &CuMatrixDeref<T>) -> CuMatrix<T> {
         let mut ptr = ptr::null_mut();
         cuda_malloc(&mut ptr, data.len() * size_of::<T>());
-        cuda_memcpy(ptr, data.as_ptr() as *const c_void, data.len() * size_of::<T>(), cudaMemcpyKind::DeviceToDevice);
-        CuMatrix {
-            ptr: ptr as *mut T,
-            len: data.len(),
-            rows: data.rows(),
-            cols: data.cols(),
-        }
+        let mut output = CuMatrix {
+            deref: CuMatrixDeref {
+                ptr: ptr as *mut T,
+                len: data.len,
+                rows: data.rows,
+                cols: data.cols,
+                leading_dimension: data.rows,
+            }
+        };
+        output.clone_from_device(data);
+        output
     }
 
     /// Consume this Matrix to return a new CuVector holding its data
@@ -90,16 +91,59 @@ impl<T: CuDataType> CuMatrix<T> {
         vector
     }
 
+    /// Returns a vector slice containing this matrix datas
+    pub fn as_vector(&self) -> ::CuVectorSlice<T> {
+        ::CuVectorSlice {
+            _parent: PhantomData,
+            deref: ::CuVectorDeref {
+                ptr: self.ptr,
+                len: self.len,
+            }
+        }
+    }
+
+    /// Returns a mutable vector slice containing this matrix datas
+    pub fn as_mut_vector(&mut self) -> ::CuVectorSliceMut<T> {
+        ::CuVectorSliceMut {
+            _parent: PhantomData,
+            deref: ::CuVectorDeref {
+                ptr: self.as_mut_ptr(),
+                len: self.len(),
+            }
+        }
+    }
+
+    /// Returns a new slice
     pub fn slice_col<'a>(&'a self, col_offset: usize, nb_cols: usize) -> CuMatrixSlice<'a, T> {
         #[cfg(not(feature = "disable_checks"))] {
             assert_infeq_usize(col_offset + nb_cols, "col_offset+nb_cols", self.cols(), "self.cols()");
         }
         CuMatrixSlice {
             _parent: PhantomData,
-            ptr: unsafe { self.ptr.offset((col_offset*self.rows) as isize) },
-            len: self.rows * nb_cols,
-            rows: self.rows,
-            cols: nb_cols,
+            deref: CuMatrixDeref {
+                ptr: unsafe { self.ptr.offset((col_offset*self.rows) as isize) },
+                len: self.rows * nb_cols,
+                rows: self.rows,
+                cols: nb_cols,
+                leading_dimension: self.leading_dimension,
+            }
+        }
+    }
+
+    /// Returns a new mutable slice
+    pub fn slice_col_mut<'a>(&'a mut self, col_offset: usize, nb_cols: usize) -> CuMatrixSliceMut<'a, T> {
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_infeq_usize(col_offset + nb_cols, "col_offset+nb_cols", self.cols(), "self.cols()");
+        }
+        CuMatrixSliceMut {
+            _parent: PhantomData,
+            deref: CuMatrixDeref {
+                rows: self.leading_dimension(),
+                cols: nb_cols,
+                len: self.rows * nb_cols,
+                ptr: unsafe { self.ptr.offset((col_offset*self.rows) as isize) },
+                leading_dimension: self.rows,
+            }
         }
     }
 

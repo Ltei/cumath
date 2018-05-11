@@ -37,7 +37,7 @@ impl Cublas {
     }
 
     /// output = matrix_mult(left_op, right_op)
-    pub fn mult_m_m(&self, left_op: &CuMatrixOp<f32>, right_op: &CuMatrixOp<f32>, output: &mut CuMatrixOpMut<f32>) {
+    pub fn mult_m_m(&self, left_op: &CuMatrixDeref<f32>, right_op: &CuMatrixDeref<f32>, output: &mut CuMatrixDeref<f32>) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(left_op.cols(), "left_op.cols()", right_op.rows(), "right_op.rows()");
             assert_eq_usize(left_op.rows(), "left_op.rows()", output.rows(), "output.rows()");
@@ -52,7 +52,7 @@ impl Cublas {
     }
 
     /// output = matrix_mult(left_op as RowMatrix, right_op)
-    pub fn mult_row_m(&self, left_op: &CuVectorOp<f32>, right_op: &CuMatrixOp<f32>, output: &mut CuVectorOpMut<f32>) {
+    pub fn mult_row_m(&self, left_op: &CuVectorDeref<f32>, right_op: &CuMatrixDeref<f32>, output: &mut CuVectorDeref<f32>) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(left_op.len(), "left_op.len()", right_op.rows(), "right_op.rows()");
             assert_eq_usize(right_op.cols(), "right_op.cols()", output.len(), "output.len()");
@@ -66,7 +66,7 @@ impl Cublas {
     }
 
     /// output = matrix_mult(left_op, right_op as ColMatrix)
-    pub fn mult_m_col(&self, left_op: &CuMatrixOp<f32>, right_op: &CuVectorOp<f32>, output: &mut CuVectorOpMut<f32>) {
+    pub fn mult_m_col(&self, left_op: &CuMatrixDeref<f32>, right_op: &CuVectorDeref<f32>, output: &mut CuVectorDeref<f32>) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(left_op.cols(), "left_op.cols()", right_op.len(), "right_op.len()");
             assert_eq_usize(left_op.rows(), "left_op.rows()", output.len(), "output.len()");
@@ -80,7 +80,7 @@ impl Cublas {
     }
 
     /// output = matrix_mult(left_op as RowMatrix, right_op as ColMatrix)
-    pub fn mult_col_row(&self, left_op: &CuVectorOp<f32>, right_op: &CuVectorOp<f32>, output: &mut CuMatrixOpMut<f32>) {
+    pub fn mult_col_row(&self, left_op: &CuVectorDeref<f32>, right_op: &CuVectorDeref<f32>, output: &mut CuMatrixDeref<f32>) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(left_op.len(), "left_op.len()", output.rows(), "output.rows()");
             assert_eq_usize(right_op.len(), "right_op.len()", output.cols(), "output.cols()");
@@ -94,7 +94,7 @@ impl Cublas {
     }
 
     /// output = out_scl * output + in_scl * matrix_mult(left_op, right_op)
-    pub fn mult_col_row_(&self, left_op: &CuVectorOp<f32>, right_op: &CuVectorOp<f32>, output: &mut CuMatrixOpMut<f32>, in_scl: f32, out_scl: f32) {
+    pub fn mult_col_row_(&self, left_op: &CuVectorDeref<f32>, right_op: &CuVectorDeref<f32>, output: &mut CuMatrixDeref<f32>, in_scl: f32, out_scl: f32) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(left_op.len(), "left_op.len()", output.rows(), "output.rows()");
             assert_eq_usize(right_op.len(), "right_op.len()", output.cols(), "output.cols()");
@@ -108,14 +108,14 @@ impl Cublas {
     }
 
     /// Returns sum(abs(value)) for value in vector
-    pub fn asum(&self, vector: &CuVectorOp<f32>) -> f32 {
+    pub fn asum(&self, vector: &CuVectorDeref<f32>) -> f32 {
         let mut output = 0.0;
         cublas_sasum(self.handle, vector.len() as i32, vector.as_ptr(), 1, &mut output);
         output
     }
 
     /// y[i][j] = y[i][j] + alpha*x[i][j]
-    pub fn axpy(&self, alpha: f32, x: &CuVectorOp<f32>, y: &mut CuVectorOpMut<f32>) {
+    pub fn axpy(&self, alpha: f32, x: &CuVectorDeref<f32>, y: &mut CuVectorDeref<f32>) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(x.len(), "x.len()", y.len(), "y.len()");
         }
