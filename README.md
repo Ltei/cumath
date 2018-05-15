@@ -1,6 +1,6 @@
 # cumath
 
-Cumath is a safe cuda wrapper for Rust : The goal is to make a low-cost abstraction wrapper in order tu use cuda, cublas, curand, and cudnn easily.
+Cumath is a safe cuda wrapper for Rust : The goal is to make a zero-cost wrapper in order tu use cuda, cublas, curand, and cudnn easily.
 
 Install nvcc before : https://developer.nvidia.com/cuda-toolkit
 
@@ -35,7 +35,7 @@ Install nvcc before : https://developer.nvidia.com/cuda-toolkit
 Add Cumath to your Cargo.toml:
 
     [dependencies]
-    cumath = "0.2.2"
+    cumath = "0.2.6"
 
 Then in your main.rs :
 
