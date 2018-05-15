@@ -17,7 +17,6 @@ pub use cumatrix::*;
 use std::fmt::Display;
 
 
-
 pub trait CuDataType: Clone + PartialEq + Display {
     #[inline]
     fn zero() -> Self;
@@ -28,3 +27,4 @@ impl CuDataType for i32 {
 impl CuDataType for f32 {
     fn zero() -> f32 { 0.0 }
 }
+

@@ -4,6 +4,8 @@ use super::CuMatrixDeref;
 use CuDataType;
 use kernel::*;
 use cuda_core::cuda::{CudaStream};
+
+#[cfg(not(feature = "disable_checks"))]
 use meta::assert::*;
 
 

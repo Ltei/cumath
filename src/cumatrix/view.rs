@@ -28,17 +28,19 @@ impl<T: CuDataType> CuMatrixView<T> {
     pub fn len(&self) -> usize { self.deref.len }
 
     pub fn borrow(&mut self, vector: &::CuVectorDeref<T>) -> &CuMatrixDeref<T> {
-        assert_infeq_usize(self.offset+self.deref.leading_dimension*self.deref.cols,
-                           "self.offset+self.deref.leading_dimension*self.deref.cols",
-                           vector.len(), "vector.len()");
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_infeq_usize(self.offset + self.deref.leading_dimension * self.deref.cols,
+                               "self.offset+self.deref.leading_dimension*self.deref.cols", vector.len(), "vector.len()");
+        }
         self.deref.ptr = unsafe { vector.ptr.offset(self.offset as isize) };
         &self.deref
     }
 
     pub fn borrow_mut(&mut self, vector: &mut ::CuVectorDeref<T>) -> &mut CuMatrixDeref<T> {
-        assert_infeq_usize(self.offset+self.deref.leading_dimension*self.deref.cols,
-                           "self.offset+self.deref.leading_dimension*self.deref.cols",
-                           vector.len(), "vector.len()");
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_infeq_usize(self.offset + self.deref.leading_dimension * self.deref.cols,
+                               "self.offset+self.deref.leading_dimension*self.deref.cols", vector.len(), "vector.len()");
+        }
         self.deref.ptr = unsafe { vector.ptr.offset(self.offset as isize) };
         &mut self.deref
     }
