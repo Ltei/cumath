@@ -1,7 +1,6 @@
 # cumath
 
-Cumath is a safe cuda wrapper for Rust : The goal is to make the highest zero-cost abstraction for cuda computations with vectors and matrices.
-Real zero cost abstraction can be achieved when template specialization will be implemented in Rust.
+Cumath is a safe cuda wrapper for Rust : The goal is to make a low-cost abstraction wrapped in order tu use cuda, cublas, curand, and cudnn easily.
 
 Install nvcc before : https://developer.nvidia.com/cuda-toolkit
 
@@ -22,6 +21,7 @@ Install nvcc before : https://developer.nvidia.com/cuda-toolkit
 
 ## To be implemented :
 
+- Finish Cudnn
 - User-definable Cuda kernels
 - More built-in functions
 - Improve automatic cuda-compatible c compiler detection
