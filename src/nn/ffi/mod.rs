@@ -8,6 +8,8 @@ mod activation_descriptor;
 mod convolution_descriptor;
 mod reduce_tensor_descriptor;
 mod filter_descriptor;
+mod rnn_descriptor;
+mod dropout_descriptor;
 
 pub use self::cudnn::*;
 pub use self::tensor_descriptor::*;
@@ -15,6 +17,8 @@ pub use self::activation_descriptor::*;
 pub use self::convolution_descriptor::*;
 pub use self::reduce_tensor_descriptor::*;
 pub use self::filter_descriptor::*;
+pub use self::rnn_descriptor::*;
+pub use self::dropout_descriptor::*;
 
 
 #[derive(PartialEq, Debug, Clone, Copy)]
@@ -155,3 +159,36 @@ pub enum CudnnTensorFormat {
     //Nhwc = 1,      Shouldn't be useful
     //NchwVectC = 2,
 }
+
+#[derive(PartialEq, Debug, Clone, Copy)]
+#[repr(C)]
+pub enum CudnnRNNMode {
+    Relu = 0,
+    Tanh = 1,
+    Lstm = 2,
+    Gru = 3,
+}
+
+#[derive(PartialEq, Debug, Clone, Copy)]
+#[repr(C)]
+pub enum CudnnDirectionMode {
+    Unidirectional = 0,
+    Bidirectional = 1,
+}
+
+#[derive(PartialEq, Debug, Clone, Copy)]
+#[repr(C)]
+pub enum CudnnRNNInputMode {
+    LinearInput = 0,
+    SkipInput = 1,
+}
+
+#[derive(PartialEq, Debug, Clone, Copy)]
+#[repr(C)]
+pub enum CudnnRNNAlgo {
+    Standard = 0,
+    PersistStatic = 1,
+    PersistDynamic = 2,
+    Count = 3,
+}
+

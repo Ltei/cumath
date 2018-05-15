@@ -43,48 +43,59 @@ extern {
 
 }
 
+
+
+
+
 #[inline]
 pub fn cudnn_create_filter_descriptor(filter_desc: *mut*mut _FilterDescriptorStruct) {
     #[cfg(not(feature = "disable_checks"))] {
-        unsafe { cudnnCreateFilterDescriptor(filter_desc) }.assert_success()
+        unsafe { cudnnCreateFilterDescriptor(filter_desc) }.assert_success();
     }
     #[cfg(feature = "disable_checks")] {
         unsafe { cudnnCreateFilterDescriptor(filter_desc) };
     }
 }
+
 #[inline]
 pub fn cudnn_destroy_filter_descriptor(filter_desc: *mut _FilterDescriptorStruct) {
     #[cfg(not(feature = "disable_checks"))] {
-        unsafe { cudnnDestroyFilterDescriptor(filter_desc) }.assert_success()
+        unsafe { cudnnDestroyFilterDescriptor(filter_desc) }.assert_success();
     }
     #[cfg(feature = "disable_checks")] {
         unsafe { cudnnDestroyFilterDescriptor(filter_desc) };
     }
 }
+
 #[inline]
-pub fn cudnn_set_filter_nd_descriptor(filter_desc: *mut _FilterDescriptorStruct, data_type: CudnnDataType, format: CudnnTensorFormat, nb_dims: i32, filter_dims: *const i32) {
+pub fn cudnn_set_filter_nd_descriptor(filter_desc: *mut _FilterDescriptorStruct, data_type: CudnnDataType, format: CudnnTensorFormat, nb_dims: i32, filter_dim_a: *const i32) {
     #[cfg(not(feature = "disable_checks"))] {
-        unsafe { cudnnSetFilterNdDescriptor(filter_desc, data_type, format, nb_dims, filter_dims) }.assert_success()
+        unsafe { cudnnSetFilterNdDescriptor(filter_desc, data_type, format, nb_dims, filter_dim_a) }.assert_success();
     }
     #[cfg(feature = "disable_checks")] {
-        unsafe { cudnnSetFilterNdDescriptor(filter_desc, data_type, format, nb_dims, filter_dims) };
+        unsafe { cudnnSetFilterNdDescriptor(filter_desc, data_type, format, nb_dims, filter_dim_a) };
     }
 }
+
 #[inline]
-pub fn cudnn_set_filter_4d_descriptor(filter_desc: *mut _FilterDescriptorStruct, data_type: CudnnDataType, format: CudnnTensorFormat, k: i32, c: i32, h: i32, w: i32) {
+pub fn cudnn_set_filter4d_descriptor(filter_desc: *mut _FilterDescriptorStruct, data_type: CudnnDataType, format: CudnnTensorFormat, k: i32, c: i32, h: i32, w: i32) {
     #[cfg(not(feature = "disable_checks"))] {
-        unsafe { cudnnSetFilter4dDescriptor(filter_desc, data_type, format, k, c, h, w) }.assert_success()
+        unsafe { cudnnSetFilter4dDescriptor(filter_desc, data_type, format, k, c, h, w) }.assert_success();
     }
     #[cfg(feature = "disable_checks")] {
         unsafe { cudnnSetFilter4dDescriptor(filter_desc, data_type, format, k, c, h, w) };
     }
 }
+
 #[inline]
-pub fn cudnn_get_filter_nd_descriptor(filter_desc: *const _FilterDescriptorStruct, nb_dims_requested: i32, data_type: *mut CudnnDataType, format: *mut CudnnTensorFormat, nb_dims: *mut i32, filter_dims: *mut i32) {
+pub fn cudnn_get_filter_nd_descriptor(filter_desc: *const _FilterDescriptorStruct, nb_dims_requested: i32, data_type: *mut CudnnDataType, format: *mut CudnnTensorFormat, nb_dims: *mut i32, filter_dim_a: *mut i32) {
     #[cfg(not(feature = "disable_checks"))] {
-        unsafe { cudnnGetFilterNdDescriptor(filter_desc, nb_dims_requested, data_type, format, nb_dims, filter_dims) }.assert_success()
+        unsafe { cudnnGetFilterNdDescriptor(filter_desc, nb_dims_requested, data_type, format, nb_dims, filter_dim_a) }.assert_success();
     }
     #[cfg(feature = "disable_checks")] {
-        unsafe { cudnnGetFilterNdDescriptor(filter_desc, nb_dims_requested, data_type, format, nb_dims, filter_dims) };
+        unsafe { cudnnGetFilterNdDescriptor(filter_desc, nb_dims_requested, data_type, format, nb_dims, filter_dim_a) };
     }
 }
+
+
+

@@ -93,7 +93,7 @@ impl CuTensorDescriptor<f32> {
     pub fn new_4d(format: CudnnTensorFormat, n: i32, c: i32, h: i32, w: i32) -> CuTensorDescriptor<f32> {
         let mut data = ptr::null_mut();
         cudnn_create_tensor_descriptor(&mut data);
-        cudnn_set_tensor_4d_descriptor(data, format, CudnnDataType::Float, n, c, h, w);
+        cudnn_set_tensor4d_descriptor(data, format, CudnnDataType::Float, n, c, h, w);
         CuTensorDescriptor {
             _phantom: PhantomData,
             data,

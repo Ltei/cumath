@@ -62,7 +62,7 @@ impl CuConvolutionDescriptor<f32> {
     pub fn new_2d(pad_h: i32, pad_w: i32, u: i32, v: i32, dilatation_h: i32, dilatation_w: i32, mode: CudnnConvolutionMode) -> CuConvolutionDescriptor<f32> {
         let mut data = ptr::null_mut();
         cudnn_create_convolution_descriptor(&mut data);
-        cudnn_set_convolution_2d_descriptor(data, pad_h, pad_w, u, v, dilatation_h, dilatation_w, mode, CudnnDataType::Float);
+        cudnn_set_convolution2d_descriptor(data, pad_h, pad_w, u, v, dilatation_h, dilatation_w, mode, CudnnDataType::Float);
         //cudnn_set_convolution_group_count(data, group_count); TODO
         //cudnn_set_convolution_math_type(data, math_type);
         CuConvolutionDescriptor { _phantom: PhantomData, data }

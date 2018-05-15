@@ -29,7 +29,7 @@ impl CuFilterDescriptor<f32> {
     pub fn new_4d(format: CudnnTensorFormat, k: i32, c: i32, h: i32, w: i32) -> CuFilterDescriptor<f32> {
         let mut data = ptr::null_mut();
         cudnn_create_filter_descriptor(&mut data);
-        cudnn_set_filter_4d_descriptor(data, CudnnDataType::Float, format, k, c, h, w);
+        cudnn_set_filter4d_descriptor(data, CudnnDataType::Float, format, k, c, h, w);
         CuFilterDescriptor { _phantom: PhantomData, data }
     }
 

@@ -19,21 +19,27 @@ extern {
 
 
 
+
+
 #[inline]
-pub fn cudnn_create(handle: *mut*mut _CudnnStruct) {
+pub fn cudnn_create(handle: *mut *mut _CudnnStruct) {
     #[cfg(not(feature = "disable_checks"))] {
-        unsafe { cudnnCreate(handle) }.assert_success()
+        unsafe { cudnnCreate(handle) }.assert_success();
     }
     #[cfg(feature = "disable_checks")] {
         unsafe { cudnnCreate(handle) };
     }
 }
+
 #[inline]
 pub fn cudnn_destroy(handle: *mut _CudnnStruct) {
     #[cfg(not(feature = "disable_checks"))] {
-        unsafe { cudnnDestroy(handle) }.assert_success()
+        unsafe { cudnnDestroy(handle) }.assert_success();
     }
     #[cfg(feature = "disable_checks")] {
         unsafe { cudnnDestroy(handle) };
     }
 }
+
+
+
