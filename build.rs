@@ -54,6 +54,7 @@ fn main() {
     println!("cargo:rustc-link-lib=dylib=cudart");
     println!("cargo:rustc-link-lib=dylib=cublas");
     println!("cargo:rustc-link-lib=dylib=curand");
+    println!("cargo:rustc-link-lib=dylib=cudnn");
 
     std::env::set_var("CXX", get_ccbin().unwrap());
 

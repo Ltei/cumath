@@ -30,6 +30,21 @@ impl<'a, T: CuDataType + 'a> CuVectorSliceIter<'a, T> {
             false => None
         }
     }
+    pub fn last<'b, 'c>(&'c mut self, len: usize) -> Option<CuVectorSlice<'b, T>> where 'a: 'b, 'b: 'c {
+        match len <= self.len {
+            true => {
+                self.len -= len;
+                Some(CuVectorSlice {
+                    _parent: PhantomData,
+                    deref: CuVectorDeref {
+                        len,
+                        ptr: unsafe { self.ptr.offset(self.len as isize) },
+                    }
+                })
+            }
+            false => None
+        }
+    }
     pub fn next_matrix<'b, 'c>(&'c mut self, rows: usize, cols: usize) -> Option<::CuMatrixSlice<'b, T>> where 'a: 'b, 'b: 'c {
         let len = rows * cols;
         match len <= self.len {
@@ -93,6 +108,21 @@ impl<'a, T: CuDataType + 'a> CuVectorSliceIterMut<'a, T> {
             false => None
         }
     }
+    pub fn last<'b, 'c>(&'c mut self, len: usize) -> Option<CuVectorSliceMut<'b, T>> where 'a: 'b, 'b: 'c {
+        match len <= self.len {
+            true => {
+                self.len -= len;
+                Some(CuVectorSliceMut {
+                    _parent: PhantomData,
+                    deref: CuVectorDeref {
+                        len,
+                        ptr: unsafe { self.ptr.offset(self.len as isize) },
+                    }
+                })
+            }
+            false => None
+        }
+    }
     pub fn next_matrix<'b, 'c>(&'c mut self, rows: usize, cols: usize) -> Option<::CuMatrixSliceMut<'b, T>> where 'a: 'b, 'b: 'c {
         let len = rows * cols;
         match len <= self.len {
@@ -121,6 +151,26 @@ impl<'a, T: CuDataType + 'a> CuVectorSliceIterMut<'a, T> {
         } else {
             self.len = 0;
         }
+    }
+
+}
+
+
+
+
+#[cfg(test)]
+mod tests {
+
+    use cuvector::*;
+
+    #[test]
+    fn last() {
+
+        let vector = CuVector::<i32>::from_host_data(&[1, -5, 1, 340, 2]);
+        let mut iter = vector.slice_iter();
+
+        iter.last(3).unwrap().dev_assert_equals(&[1, 340, 2]);
+
     }
 
 }

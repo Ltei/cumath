@@ -5,6 +5,7 @@ mod cuda_core;
 mod kernel;
 mod cuvector;
 mod cumatrix;
+pub mod nn;
 
 pub use cuda_core::{cuda::*, cublas::*, curand::*};
 pub use cuvector::*;
