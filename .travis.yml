@@ -1,3 +1,23 @@
 
 
 language: rust
+
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - libcurl4-openssl-dev
+      - libblas-dev
+      - nvidia-opencl-dev
+      - nvidia-dev
+      - gcc-5.0
+      - g++-5.0
+
+env:
+  global:
+    - CC=gcc-5.0
+    - CXX=g++-5.0
+  matrix:
+    - FEATURES=travis
+    - FEATURES=lint
