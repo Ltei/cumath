@@ -10,8 +10,6 @@ addons:
       - build-essential
       - gcc-4.4 g++-4.4
       - clang-3.8
-      - nvidia-common
-      - nvidia-current
       - nvidia-cuda-toolkit nvidia-cuda-dev
 
 env:
