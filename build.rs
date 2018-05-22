@@ -125,7 +125,6 @@ fn try_with_gcc() -> Result<String, CumathBuildErrror> {
     } else {
         let output = Command::new("ls").arg("/usr/bin/").output()?;
         let output = String::from_utf8(output.stdout)?;
-        println!("::::::::::::::::::::::::::::");
         for line in output.lines().rev() {
             if line.len() >= 5 && line[0..4].eq("gcc-") {
                 if let Ok(version) = line[4..].parse::<f32>() {
@@ -135,25 +134,8 @@ fn try_with_gcc() -> Result<String, CumathBuildErrror> {
                 }
             }
         }
-        println!("::::::::::::::::::::::::::::");
         Err(CumathBuildErrror::new("g++ version >= 6".to_owned()))
     }
-    /*let output = Command::new("gcc").arg("--version").output()?;
-    let output = String::from_utf8(output.stdout)?;
-    match output.split("\n").next() {
-        Some(output) => {
-            let parsed: Vec<_> = output.split_whitespace().collect();
-            let version = parsed[parsed.len()-2].split(".").next().unwrap().parse::<usize>()?;
-            if version < 6 {
-                Ok("g++".to_owned())
-            } else {
-                Err(CumathBuildErrror::new("g++ version >= 6".to_owned()))
-            }
-        },
-        None => {
-            Err(CumathBuildErrror::new("Couldn't extract gcc version from gcc --version".to_owned()))
-        }
-    }*/
 }
 fn try_with_clang() -> Result<String, CumathBuildErrror> {
     let output = Command::new("ls").arg("/usr/bin/").output()?;
