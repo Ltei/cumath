@@ -117,45 +117,64 @@ pub type cudaStream_t = *mut Struct_cudaStream_t;
 
 
 extern {
-    fn cudaMalloc(devPtr: *mut*mut c_void, size: usize) -> cudaError_t;
+
+    fn cudaMalloc(
+        devPtr: *mut*mut c_void,
+        size: usize
+    ) -> cudaError_t;
 
     fn cudaFree(dev_ptr: *mut c_void) -> cudaError_t;
 
-    fn cudaMemcpy(dst: *mut c_void,
-                  src: *const c_void,
-                  count: usize,
-                  kind: cudaMemcpyKind) -> cudaError_t;
+    fn cudaMemcpy(
+        dst: *mut c_void,
+        src: *const c_void,
+        count: usize,
+        kind: cudaMemcpyKind
+    ) -> cudaError_t;
 
-    fn cudaMemcpy2D(dst: *mut c_void,
-                    dpitch: usize,
-                    src: *const c_void,
-                    spitch: usize,
-                    width: usize,
-                    height: usize,
-                    kind: cudaMemcpyKind) -> cudaError_t;
+    fn cudaMemcpy2D(
+        dst: *mut c_void,
+        dpitch: usize,
+        src: *const c_void,
+        spitch: usize,
+        width: usize,
+        height: usize,
+        kind: cudaMemcpyKind
+    ) -> cudaError_t;
+
+    fn cudaMemset(
+        dst: *mut c_void,
+        value: i32,
+        count: usize
+    ) -> cudaError_t;
 
     fn cudaDeviceSynchronize() -> cudaError_t;
+
     fn cudaStreamSynchronize(stream: cudaStream_t) -> cudaError_t;
 
     fn cudaStreamCreate(stream: *mut cudaStream_t) -> cudaError_t;
+
     fn cudaStreamDestroy(stream: cudaStream_t) -> cudaError_t;
 }
 
 
+
+
+
 #[inline]
-pub fn cuda_malloc(ptr: *mut*mut c_void, size: usize) {
+pub fn cuda_malloc(dev_ptr: *mut*mut c_void, size: usize) {
     #[cfg(not(feature = "disable_checks"))] {
-        unsafe { cudaMalloc(ptr, size) }.assert_success()
+        unsafe { cudaMalloc(dev_ptr, size) }.assert_success();
     }
     #[cfg(feature = "disable_checks")] {
-        unsafe { cudaMalloc(ptr, size) };
+        unsafe { cudaMalloc(dev_ptr, size) };
     }
 }
 
 #[inline]
 pub fn cuda_free(dev_ptr: *mut c_void) {
     #[cfg(not(feature = "disable_checks"))] {
-        unsafe { cudaFree(dev_ptr) }.assert_success()
+        unsafe { cudaFree(dev_ptr) }.assert_success();
     }
     #[cfg(feature = "disable_checks")] {
         unsafe { cudaFree(dev_ptr) };
@@ -165,7 +184,7 @@ pub fn cuda_free(dev_ptr: *mut c_void) {
 #[inline]
 pub fn cuda_memcpy(dst: *mut c_void, src: *const c_void, count: usize, kind: cudaMemcpyKind) {
     #[cfg(not(feature = "disable_checks"))] {
-        unsafe { cudaMemcpy(dst, src, count, kind) }.assert_success()
+        unsafe { cudaMemcpy(dst, src, count, kind) }.assert_success();
     }
     #[cfg(feature = "disable_checks")] {
         unsafe { cudaMemcpy(dst, src, count, kind) };
@@ -175,7 +194,7 @@ pub fn cuda_memcpy(dst: *mut c_void, src: *const c_void, count: usize, kind: cud
 #[inline]
 pub fn cuda_memcpy2d(dst: *mut c_void, dpitch: usize, src: *const c_void, spitch: usize, width: usize, height: usize, kind: cudaMemcpyKind) {
     #[cfg(not(feature = "disable_checks"))] {
-        unsafe { cudaMemcpy2D(dst, dpitch, src, spitch, width, height, kind) }.assert_success()
+        unsafe { cudaMemcpy2D(dst, dpitch, src, spitch, width, height, kind) }.assert_success();
     }
     #[cfg(feature = "disable_checks")] {
         unsafe { cudaMemcpy2D(dst, dpitch, src, spitch, width, height, kind) };
@@ -183,9 +202,19 @@ pub fn cuda_memcpy2d(dst: *mut c_void, dpitch: usize, src: *const c_void, spitch
 }
 
 #[inline]
+pub fn cuda_memset(dst: *mut c_void, value: i32, count: usize) {
+    #[cfg(not(feature = "disable_checks"))] {
+        unsafe { cudaMemset(dst, value, count) }.assert_success();
+    }
+    #[cfg(feature = "disable_checks")] {
+        unsafe { cudaMemset(dst, value, count) };
+    }
+}
+
+#[inline]
 pub fn cuda_device_synchronize() {
     #[cfg(not(feature = "disable_checks"))] {
-        unsafe { cudaDeviceSynchronize() }.assert_success()
+        unsafe { cudaDeviceSynchronize() }.assert_success();
     }
     #[cfg(feature = "disable_checks")] {
         unsafe { cudaDeviceSynchronize() };
@@ -195,7 +224,7 @@ pub fn cuda_device_synchronize() {
 #[inline]
 pub fn cuda_stream_synchronize(stream: cudaStream_t) {
     #[cfg(not(feature = "disable_checks"))] {
-        unsafe { cudaStreamSynchronize(stream) }.assert_success()
+        unsafe { cudaStreamSynchronize(stream) }.assert_success();
     }
     #[cfg(feature = "disable_checks")] {
         unsafe { cudaStreamSynchronize(stream) };
@@ -205,7 +234,7 @@ pub fn cuda_stream_synchronize(stream: cudaStream_t) {
 #[inline]
 pub fn cuda_stream_create(stream: *mut cudaStream_t) {
     #[cfg(not(feature = "disable_checks"))] {
-        unsafe { cudaStreamCreate(stream) }.assert_success()
+        unsafe { cudaStreamCreate(stream) }.assert_success();
     }
     #[cfg(feature = "disable_checks")] {
         unsafe { cudaStreamCreate(stream) };
@@ -215,9 +244,12 @@ pub fn cuda_stream_create(stream: *mut cudaStream_t) {
 #[inline]
 pub fn cuda_stream_destroy(stream: cudaStream_t) {
     #[cfg(not(feature = "disable_checks"))] {
-        unsafe { cudaStreamDestroy(stream) }.assert_success()
+        unsafe { cudaStreamDestroy(stream) }.assert_success();
     }
     #[cfg(feature = "disable_checks")] {
         unsafe { cudaStreamDestroy(stream) };
     }
 }
+
+
+

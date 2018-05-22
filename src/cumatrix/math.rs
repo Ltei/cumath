@@ -2,8 +2,8 @@
 use std::marker::PhantomData;
 use super::CuMatrixDeref;
 use CuDataType;
-use kernel::*;
 use cuda_core::cuda::{CudaStream};
+use kernel::*;
 
 #[cfg(not(feature = "disable_checks"))]
 use meta::assert::*;

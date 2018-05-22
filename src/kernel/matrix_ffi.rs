@@ -32,7 +32,7 @@ mod tests {
                                            kernel.cols() as i32, kernel.leading_dimension() as i32,
                                            1, 1, output.as_mut_ptr(),
                                            output.leading_dimension() as i32, DEFAULT_STREAM.stream) }
-        let mut buffer = vec![0.0; 9];
+        let mut buffer = vec![0.0; 6];
         output.clone_to_host(&mut buffer);
 
         assert_equals_float(buffer[0], 1.0);
