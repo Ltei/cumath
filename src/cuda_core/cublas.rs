@@ -94,7 +94,7 @@ impl Cublas {
     }
 
     /// output = out_scl * output + in_scl * matrix_mult(left_op, right_op)
-    pub fn mult_col_row_(&self, left_op: &CuVectorDeref<f32>, right_op: &CuVectorDeref<f32>, output: &mut CuMatrixDeref<f32>, in_scl: f32, out_scl: f32) {
+    pub fn mult_col_row_rescaled(&self, left_op: &CuVectorDeref<f32>, right_op: &CuVectorDeref<f32>, output: &mut CuMatrixDeref<f32>, in_scl: f32, out_scl: f32) {
         #[cfg(not(feature = "disable_checks"))] {
             assert_eq_usize(left_op.len(), "left_op.len()", output.rows(), "output.rows()");
             assert_eq_usize(right_op.len(), "right_op.len()", output.cols(), "output.cols()");
