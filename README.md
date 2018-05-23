@@ -2,11 +2,12 @@
 
 Cumath is a safe cuda wrapper for Rust : The goal is to make a zero-cost wrapper in order tu use cuda, cublas, and curand easily.
 
-Install nvcc before : https://developer.nvidia.com/cuda-toolkit
+[Install cuda before using this cumath](https://developer.nvidia.com/cuda-toolkit)
 
 /!\ This library is still under developement!
 
-/!\ The detection of cuda compatible c compiler is very basic and only works for linux, if it doesn't work for you, you can try to comment this line in build.rs : "std::env::set_var("CXX", get_ccbin().unwrap());" to put the name of your C compiler
+/!\ Cumath look for cuda libraries in /usr/bin/loca/cuda/lib64 (the default cuda path on linux)
+    If it doesn't work for you, you can [explicitly specify cuda path](https://stackoverflow.com/questions/26246849/how-to-i-tell-rust-where-to-look-for-a-static-library)
 
 
 ## Implemented :
@@ -21,7 +22,7 @@ Install nvcc before : https://developer.nvidia.com/cuda-toolkit
 
 ## To be implemented :
 
-- cumath_nn a Cudnn wrapper based on cumath (https://github.com/Ltei/cumath_nn)
+- [cumath_nn a Cudnn wrapper based on cumath](https://github.com/Ltei/cumath_nn)
 - User-definable Cuda kernels
 - More built-in functions
 - Improve automatic cuda-compatible c compiler detection
