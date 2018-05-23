@@ -21,6 +21,7 @@ Install nvcc before : https://developer.nvidia.com/cuda-toolkit
 
 ## To be implemented :
 
+- cumath_nn a Cudnn wrapper based on cumath (https://github.com/Ltei/cumath_nn)
 - User-definable Cuda kernels
 - More built-in functions
 - Improve automatic cuda-compatible c compiler detection
