@@ -3,7 +3,7 @@
 [package]
 name = "cumath"
 description = "Cuda-based matrix/vector computations"
-version = "0.2.6"
+version = "0.2.7"
 repository = "https://github.com/Ltei/cumath"
 authors = ["ltei"]
 license = "MIT OR Apache-2.0"
@@ -14,6 +14,8 @@ exclude = [
     ".gitignore",
     ".idea/*",
     "target/*",
+    "_TRASH/*",
+    "ffi_caller_generator.sh"
 ]
 
 
