@@ -16,6 +16,8 @@ pub struct CuMatrixMath<T: CuDataType> {
 
 impl CuMatrixMath<f32> {
 
+
+
     /// y[i][j] = a*y[i][j]+b
     pub fn aypb(a: f32, y: &mut CuMatrixDeref<f32>, b: f32, stream: &CudaStream) {
         unsafe { VectorFragment_aypb_f32(a, y.as_mut_ptr(), y.leading_dimension() as i32, b, y.rows() as i32, y.cols() as i32, stream.stream) }

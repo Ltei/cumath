@@ -36,6 +36,40 @@ impl Cublas {
         cublas_set_stream(self.handle, stream.stream)
     }
 
+    /// Returns the smallest i where abs(vector[i-1]) = max(abs(value) for value in vector)
+    pub fn amax_idx(&self, vector: &CuVectorDeref<f32>) -> i32 {
+        let mut output = 0;
+        cublas_isamax(self.handle, vector.len() as i32, vector.as_ptr(), 1, &mut output);
+        output
+    }
+
+    /// Returns the smallest i where abs(vector[i-1]) = min(abs(value) for value in vector)
+    pub fn amin_idx(&self, vector: &CuVectorDeref<f32>) -> i32 {
+        let mut output = 0;
+        cublas_isamin(self.handle, vector.len() as i32, vector.as_ptr(), 1, &mut output);
+        output
+    }
+
+    /// Returns sum(abs(value) for value in vector)
+    pub fn asum(&self, vector: &CuVectorDeref<f32>) -> f32 {
+        let mut output = 0.0;
+        cublas_sasum(self.handle, vector.len() as i32, vector.as_ptr(), 1, &mut output);
+        output
+    }
+
+    /// y[i] = y[i] + alpha*x[i]
+    pub fn axpy(&self, alpha: f32, x: &CuVectorDeref<f32>, y: &mut CuVectorDeref<f32>) {
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(x.len(), "x.len()", y.len(), "y.len()");
+        }
+        cublas_saxpy(self.handle, x.len() as i32, &alpha, x.as_ptr(), 1, y.as_mut_ptr(), 1)
+    }
+
+    /// y[i] = y[i] * alpha
+    pub fn scal(&self, vector: &mut CuVectorDeref<f32>, alpha: f32) {
+        cublas_sscal(self.handle, vector.len() as i32, &alpha, vector.as_mut_ptr(), 1);
+    }
+
     /// output = matrix_mult(left_op, right_op)
     pub fn mult_m_m(&self, left_op: &CuMatrixDeref<f32>, right_op: &CuMatrixDeref<f32>, output: &mut CuMatrixDeref<f32>) {
         #[cfg(not(feature = "disable_checks"))] {
@@ -107,30 +141,42 @@ impl Cublas {
                      &out_scl, output.as_mut_ptr(), output.rows() as i32)
     }
 
-    /// Returns sum(abs(value)) for value in vector
-    pub fn asum(&self, vector: &CuVectorDeref<f32>) -> f32 {
-        let mut output = 0.0;
-        cublas_sasum(self.handle, vector.len() as i32, vector.as_ptr(), 1, &mut output);
-        output
-    }
-
-    /// y[i][j] = y[i][j] + alpha*x[i][j]
-    pub fn axpy(&self, alpha: f32, x: &CuVectorDeref<f32>, y: &mut CuVectorDeref<f32>) {
-        #[cfg(not(feature = "disable_checks"))] {
-            assert_eq_usize(x.len(), "x.len()", y.len(), "y.len()");
-        }
-        cublas_saxpy(self.handle, x.len() as i32, &alpha, x.as_ptr(), 1, y.as_mut_ptr(), 1)
-    }
-
 }
 
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
 
+    fn abs(x: f32) -> f32 {
+        match x < 0.0 { true => -x, false => x }
+    }
+
     #[test]
-    fn abs_sum() {
+    fn amax_idx() {
+        let input_data = vec![-1.0, 2.0, 1.0, -2.0, 7.0, 5.5, -3.7, 1.1, 0.7];
+
+        let cublas = Cublas::new().unwrap();
+        let vector = CuVector::<f32>::from_host_data(input_data.as_slice());
+        let idx = cublas.amax_idx(&vector);
+
+        assert_eq!(4, idx -1);
+    }
+
+    #[test]
+    fn amin_idx() {
+        let input_data = vec![-1.0, 2.0, 1.0, -2.0, 7.0, 5.5, -3.7, 1.1, -0.7];
+
+        let cublas = Cublas::new().unwrap();
+        let vector = CuVector::<f32>::from_host_data(input_data.as_slice());
+        let idx = cublas.amin_idx(&vector);
+
+        assert_eq!(8, idx -1);
+    }
+
+    #[test]
+    fn asum() {
         let input_data = vec![-1.0, 2.0, 1.0, -2.0, 7.0, 5.5, -3.7, 1.1, 0.7];
 
         let cublas = Cublas::new().unwrap();
@@ -138,6 +184,31 @@ mod tests {
         let asum = cublas.asum(&vector);
 
         assert_eq!(24.0, asum);
+    }
+
+    #[test]
+    fn axpy() {
+        let x_data = vec![-1.0, 1.5, 0.2, -2.0];
+        let y_data = vec![1.0, 0.0, -0.15, 5.0];
+
+        let cublas = Cublas::new().unwrap();
+        let x = CuVector::<f32>::from_host_data(x_data.as_slice());
+        let mut y = CuVector::<f32>::from_host_data(y_data.as_slice());
+        cublas.axpy(2.0, &x, &mut y);
+
+        x.dev_assert_equals(&[-1.0, 1.5, 0.2, -2.0]);
+        y.dev_assert_equals(&[-1.0, 3.0, 0.25, 1.0]);
+    }
+
+    #[test]
+    fn scal() {
+        let x_data = vec![-1.0, 1.5, 0.2, -2.0];
+
+        let cublas = Cublas::new().unwrap();
+        let mut x = CuVector::<f32>::from_host_data(x_data.as_slice());
+        cublas.scal(&mut x, 2.0);
+
+        x.dev_assert_equals(&[-2.0, 3.0, 0.4, -4.0]);
     }
 
     #[test]
@@ -202,6 +273,25 @@ mod tests {
         assert_equals_float(output_buffer[5], 2.2);
     }
 
+    #[test]
+    fn mult_v_m() {
+        let vector_data = vec![2.2, -3.2, 1.1];
+        let matrix_data = vec![-1.0, 2.0, 1.0, -2.0, 7.0, 5.5];
+
+        let cublas = Cublas::new().unwrap();
+        let vector = CuVector::<f32>::from_host_data(vector_data.as_slice());
+        let matrix = CuMatrix::<f32>::from_host_data(3, 2, matrix_data.as_slice());
+        let mut output = CuVector::<f32>::zero(2);
+
+        cublas.mult_row_m(&vector, &matrix, &mut output);
+
+        let mut output_buffer = vec![0.0; 2];
+        output.clone_to_host(output_buffer.as_mut_slice());
+
+        assert_equals_float(output_buffer[0], -7.5);
+        assert_equals_float(output_buffer[1], -20.75);
+    }
+
     /*
     #[test]
     fn benchmark_stream() {
@@ -255,24 +345,5 @@ mod tests {
         println!("3 finished in {}.{}", dt.as_secs(), dt.subsec_nanos());
     }
     */
-
-    #[test]
-    fn mult_v_m() {
-        let vector_data = vec![2.2, -3.2, 1.1];
-        let matrix_data = vec![-1.0, 2.0, 1.0, -2.0, 7.0, 5.5];
-
-        let cublas = Cublas::new().unwrap();
-        let vector = CuVector::<f32>::from_host_data(vector_data.as_slice());
-        let matrix = CuMatrix::<f32>::from_host_data(3, 2, matrix_data.as_slice());
-        let mut output = CuVector::<f32>::zero(2);
-
-        cublas.mult_row_m(&vector, &matrix, &mut output);
-
-        let mut output_buffer = vec![0.0; 2];
-        output.clone_to_host(output_buffer.as_mut_slice());
-
-        assert_equals_float(output_buffer[0], -7.5);
-        assert_equals_float(output_buffer[1], -20.75);
-    }
 
 }
