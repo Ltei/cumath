@@ -1,8 +1,8 @@
 # cumath
 
-Cumath is a safe cuda wrapper for Rust : The goal is to make a zero-cost wrapper in order tu use cuda, cublas, and curand easily.
+Cumath is a safe cuda wrapper for Rust : The goal is to make a zero-cost wrapper that allows you tu use cuda, cublas, and curand easily.
 
-[Install cuda before using this cumath](https://developer.nvidia.com/cuda-toolkit)
+[Install cuda before using cumath](https://developer.nvidia.com/cuda-toolkit)
 
 /!\ This library is still under developement!
 
@@ -22,7 +22,7 @@ Cumath is a safe cuda wrapper for Rust : The goal is to make a zero-cost wrapper
 
 ## To be implemented :
 
-- [cumath_nn a Cudnn wrapper based on cumath](https://github.com/Ltei/cumath_nn)
+- [cumath_nn : a Cudnn wrapper based on cumath](https://github.com/Ltei/cumath_nn)
 - User-definable Cuda kernels
 - More built-in functions
 - Improve automatic cuda-compatible c compiler detection
