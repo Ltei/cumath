@@ -149,10 +149,6 @@ mod tests {
 
     use super::*;
 
-    fn abs(x: f32) -> f32 {
-        match x < 0.0 { true => -x, false => x }
-    }
-
     #[test]
     fn amax_idx() {
         let input_data = vec![-1.0, 2.0, 1.0, -2.0, 7.0, 5.5, -3.7, 1.1, 0.7];
