@@ -36,6 +36,9 @@ impl Cublas {
         cublas_set_stream(self.handle, stream.stream)
     }
 
+
+    // Level 1
+
     /// Returns the smallest i where abs(vector[i-1]) = max(abs(value) for value in vector)
     pub fn amax_idx(&self, vector: &CuVectorDeref<f32>) -> i32 {
         let mut output = 0;
@@ -57,6 +60,16 @@ impl Cublas {
         output
     }
 
+    /// Returns the dot product of x and y
+    pub fn dot(&self, x: &CuVectorDeref<f32>, y: &CuVectorDeref<f32>) -> f32 {
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(x.len(), "x.len()", y.len(), "y.len()");
+        }
+        let mut result = 0.0;
+        cublas_sdot(self.handle, x.len() as i32, x.as_ptr(), 1, y.as_ptr(), 1, &mut result);
+        result
+    }
+
     /// y[i] = y[i] + alpha*x[i]
     pub fn axpy(&self, alpha: f32, x: &CuVectorDeref<f32>, y: &mut CuVectorDeref<f32>) {
         #[cfg(not(feature = "disable_checks"))] {
@@ -70,20 +83,16 @@ impl Cublas {
         cublas_sscal(self.handle, vector.len() as i32, &alpha, vector.as_mut_ptr(), 1);
     }
 
-    /// output = matrix_mult(left_op, right_op)
-    pub fn mult_m_m(&self, left_op: &CuMatrixDeref<f32>, right_op: &CuMatrixDeref<f32>, output: &mut CuMatrixDeref<f32>) {
+    /// Swap vector1 and vector2 elements in memory
+    pub fn swap(&self, vector1: &mut CuVectorDeref<f32>, vector2: &mut CuVectorDeref<f32>) {
         #[cfg(not(feature = "disable_checks"))] {
-            assert_eq_usize(left_op.cols(), "left_op.cols()", right_op.rows(), "right_op.rows()");
-            assert_eq_usize(left_op.rows(), "left_op.rows()", output.rows(), "output.rows()");
-            assert_eq_usize(right_op.cols(), "right_op.cols()", output.cols(), "output.cols()");
+            assert_eq_usize(vector1.len(), "x.len()", vector2.len(), "y.len()");
         }
-        cublas_sgemm(self.handle,
-                     CublasOperation::None, CublasOperation::None,
-                     left_op.rows() as i32, right_op.cols() as i32, left_op.cols() as i32, &1.0,
-                     left_op.as_ptr(), left_op.rows() as i32,
-                     right_op.as_ptr(), right_op.rows() as i32,
-                     &0.0, output.as_mut_ptr(), output.rows() as i32)
+        cublas_sswap(self.handle, vector1.len() as i32, vector1.as_mut_ptr(), 1, vector2.as_mut_ptr(), 1);
     }
+
+
+    // Level 2
 
     /// output = matrix_mult(left_op as RowMatrix, right_op)
     pub fn mult_row_m(&self, left_op: &CuVectorDeref<f32>, right_op: &CuMatrixDeref<f32>, output: &mut CuVectorDeref<f32>) {
@@ -141,6 +150,24 @@ impl Cublas {
                      &out_scl, output.as_mut_ptr(), output.rows() as i32)
     }
 
+
+    // Level 3
+
+    /// output = matrix_mult(left_op, right_op)
+    pub fn mult_m_m(&self, left_op: &CuMatrixDeref<f32>, right_op: &CuMatrixDeref<f32>, output: &mut CuMatrixDeref<f32>) {
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(left_op.cols(), "left_op.cols()", right_op.rows(), "right_op.rows()");
+            assert_eq_usize(left_op.rows(), "left_op.rows()", output.rows(), "output.rows()");
+            assert_eq_usize(right_op.cols(), "right_op.cols()", output.cols(), "output.cols()");
+        }
+        cublas_sgemm(self.handle,
+                     CublasOperation::None, CublasOperation::None,
+                     left_op.rows() as i32, right_op.cols() as i32, left_op.cols() as i32, &1.0,
+                     left_op.as_ptr(), left_op.rows() as i32,
+                     right_op.as_ptr(), right_op.rows() as i32,
+                     &0.0, output.as_mut_ptr(), output.rows() as i32)
+    }
+
 }
 
 
@@ -148,6 +175,9 @@ impl Cublas {
 mod tests {
 
     use super::*;
+
+
+    // Level 1
 
     #[test]
     fn amax_idx() {
@@ -183,6 +213,18 @@ mod tests {
     }
 
     #[test]
+    fn dot() {
+        let x_data = vec![-1.0, 1.5, 0.2, -2.0];
+        let y_data = vec![-2.0, 7.5, -245.2, -5.0];
+
+        let cublas = Cublas::new().unwrap();
+        let mut x = CuVector::<f32>::from_host_data(x_data.as_slice());
+        let mut y = CuVector::<f32>::from_host_data(y_data.as_slice());
+        let result = cublas.dot(&mut x, &mut y);
+        assert_equals_float(result, (0..x_data.len()).fold(0.0, |acc, x| acc + x_data[x] * y_data[x]));
+    }
+
+    #[test]
     fn axpy() {
         let x_data = vec![-1.0, 1.5, 0.2, -2.0];
         let y_data = vec![1.0, 0.0, -0.15, 5.0];
@@ -208,24 +250,21 @@ mod tests {
     }
 
     #[test]
-    fn mult_m_m() {
-        let input_data = vec![-1.0, 2.0, 1.0, -2.0, 7.0, 5.5];
+    fn swap() {
+        let x_data = vec![-1.0, 1.5, 0.2, -2.0];
+        let y_data = vec![-2.0, 7.5, -245.2, -5.0];
 
         let cublas = Cublas::new().unwrap();
-        let matrix1 = CuMatrix::<f32>::from_host_data(2, 3, input_data.as_slice());
-        let matrix2 = CuMatrix::<f32>::from_host_data(3, 2, input_data.as_slice());
-        let mut output = CuMatrix::<f32>::zero(2, 2);
+        let mut x = CuVector::<f32>::from_host_data(x_data.as_slice());
+        let mut y = CuVector::<f32>::from_host_data(y_data.as_slice());
+        cublas.swap(&mut x, &mut y);
 
-        cublas.mult_m_m(&matrix1, &matrix2, &mut output);
-
-        let mut output_buffer = vec![0.0; 4];
-        output.clone_to_host(output_buffer.as_mut_slice());
-
-        assert_equals_float(output_buffer[0], 10.0);
-        assert_equals_float(output_buffer[1], -0.5);
-        assert_equals_float(output_buffer[2], 47.5);
-        assert_equals_float(output_buffer[3], 12.25);
+        x.dev_assert_equals(&y_data);
+        y.dev_assert_equals(&x_data);
     }
+
+
+    // Level 2
 
     #[test]
     fn mult_m_col() {
@@ -286,6 +325,29 @@ mod tests {
 
         assert_equals_float(output_buffer[0], -7.5);
         assert_equals_float(output_buffer[1], -20.75);
+    }
+
+
+    // Level 3
+
+    #[test]
+    fn mult_m_m() {
+        let input_data = vec![-1.0, 2.0, 1.0, -2.0, 7.0, 5.5];
+
+        let cublas = Cublas::new().unwrap();
+        let matrix1 = CuMatrix::<f32>::from_host_data(2, 3, input_data.as_slice());
+        let matrix2 = CuMatrix::<f32>::from_host_data(3, 2, input_data.as_slice());
+        let mut output = CuMatrix::<f32>::zero(2, 2);
+
+        cublas.mult_m_m(&matrix1, &matrix2, &mut output);
+
+        let mut output_buffer = vec![0.0; 4];
+        output.clone_to_host(output_buffer.as_mut_slice());
+
+        assert_equals_float(output_buffer[0], 10.0);
+        assert_equals_float(output_buffer[1], -0.5);
+        assert_equals_float(output_buffer[2], 47.5);
+        assert_equals_float(output_buffer[3], 12.25);
     }
 
     /*

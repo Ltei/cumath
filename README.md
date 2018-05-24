@@ -25,7 +25,6 @@ Cumath is a safe cuda wrapper for Rust : The goal is to make a zero-cost wrapper
 - [cumath_nn : a Cudnn wrapper based on cumath](https://github.com/Ltei/cumath_nn)
 - User-definable Cuda kernels
 - More built-in functions
-- Improve automatic cuda-compatible c compiler detection
 
 ## Won't be implemented
 

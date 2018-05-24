@@ -52,9 +52,20 @@ pub enum CublasOperation {
 
 extern {
 
+
+    // Helper
+
     fn cublasCreate_v2(handle: *mut*mut StructCublasContext) -> CublasStatus;
 
     fn cublasDestroy_v2(handle: *mut StructCublasContext) -> CublasStatus;
+
+    fn cublasSetStream_v2(
+        handle: *mut StructCublasContext,
+        stream: *mut Struct_cudaStream_t
+    ) -> CublasStatus;
+
+
+    // Level 1
 
     fn cublasIsamax_v2(
         handle: *mut StructCublasContext,
@@ -90,6 +101,16 @@ extern {
         incy: i32
     ) -> CublasStatus;
 
+    fn cublasSdot_v2(
+        handle: *mut StructCublasContext,
+        n: i32,
+        x: *const f32,
+        incx: i32,
+        y: *const f32,
+        incy: i32,
+        result: *mut f32,
+    ) -> CublasStatus; //TODO Caller
+
     fn cublasSscal_v2(
         handle: *mut StructCublasContext,
         n: i32,
@@ -98,6 +119,17 @@ extern {
         incx: i32,
     ) -> CublasStatus;
 
+    fn cublasSswap_v2(
+        handle: *mut StructCublasContext,
+        n: i32,
+        x: *const f32,
+        incx: i32,
+        y: *const f32,
+        incy: i32
+    ) -> CublasStatus; //TODO Caller
+
+
+    // Level 2
 
     fn cublasSgemv_v2(
         handle: *mut StructCublasContext,
@@ -110,6 +142,9 @@ extern {
         y: *mut f32, incy: i32
     ) -> CublasStatus;
 
+
+    // Level 3
+
     fn cublasSgemm_v2(
         handle: *mut StructCublasContext,
         transa: CublasOperation, transb: CublasOperation,
@@ -121,13 +156,11 @@ extern {
         C: *mut f32, ldc: i32
     ) -> CublasStatus;
 
-    fn cublasSetStream_v2(
-        handle: *mut StructCublasContext,
-        stream: *mut Struct_cudaStream_t
-    ) -> CublasStatus;
 
 }
 
+
+// Helper
 
 #[inline]
 pub fn cublas_create(handle: *mut*mut StructCublasContext) -> Option<&'static str> {
@@ -149,6 +182,19 @@ pub fn cublas_destroy(handle: *mut StructCublasContext) {
         unsafe { cublasDestroy_v2(handle) };
     }
 }
+
+#[inline]
+pub fn cublas_set_stream(handle: *mut StructCublasContext, stream: *mut Struct_cudaStream_t) {
+    #[cfg(not(feature = "disable_checks"))] {
+        unsafe { cublasSetStream_v2(handle, stream) }.assert_success()
+    }
+    #[cfg(feature = "disable_checks")] {
+        unsafe { cublasSetStream_v2(handle, stream) };
+    }
+}
+
+
+// Level 1
 
 #[inline]
 pub fn cublas_isamax(handle: *mut StructCublasContext, n: i32, x: *const f32, incx: i32, result: *mut i32) {
@@ -191,6 +237,16 @@ pub fn cublas_saxpy(handle: *mut StructCublasContext, n: i32, alpha: *const f32,
 }
 
 #[inline]
+pub fn cublas_sdot(handle: *mut StructCublasContext, n: i32, x: *const f32, incx: i32, y: *const f32, incy: i32, result: *mut f32) {
+    #[cfg(not(feature = "disable_checks"))] {
+        unsafe { cublasSdot_v2(handle, n, x, incx, y, incy, result) }.assert_success()
+    }
+    #[cfg(feature = "disable_checks")] {
+        unsafe { cublasSdot_v2(handle, n, x, incx, y, incy, result) };
+    }
+}
+
+#[inline]
 pub fn cublas_sscal(handle: *mut StructCublasContext, n: i32, alpha: *const f32, x: *mut f32, incx: i32) {
     #[cfg(not(feature = "disable_checks"))] {
         unsafe { cublasSscal_v2(handle, n, alpha, x, incx) }.assert_success()
@@ -199,6 +255,19 @@ pub fn cublas_sscal(handle: *mut StructCublasContext, n: i32, alpha: *const f32,
         unsafe { cublasSscal_v2(handle, n, alpha, x, incx) };
     }
 }
+
+#[inline]
+pub fn cublas_sswap(handle: *mut StructCublasContext, n: i32, x: *const f32, incx: i32, y: *const f32, incy: i32) {
+    #[cfg(not(feature = "disable_checks"))] {
+        unsafe { cublasSswap_v2(handle, n, x, incx, y, incy) }.assert_success()
+    }
+    #[cfg(feature = "disable_checks")] {
+        unsafe { cublasSswap_v2(handle, n, x, incx, y, incy) };
+    }
+}
+
+
+// Level 2
 
 #[inline]
 pub fn cublas_sgemv(handle: *mut StructCublasContext, trans: CublasOperation, m: i32, n: i32, alpha: *const f32, a: *const f32, lda: i32, x: *const f32, incx: i32, beta: *const f32, y: *mut f32, incy: i32) {
@@ -210,6 +279,9 @@ pub fn cublas_sgemv(handle: *mut StructCublasContext, trans: CublasOperation, m:
     }
 }
 
+
+// Level 3
+
 #[inline]
 pub fn cublas_sgemm(handle: *mut StructCublasContext, transa: CublasOperation, transb: CublasOperation, m: i32, n: i32, k: i32, alpha: *const f32, a: *const f32, lda: i32, b: *const f32, ldb: i32, beta: *const f32, c: *mut f32, ldc: i32) {
     #[cfg(not(feature = "disable_checks"))] {
@@ -217,15 +289,5 @@ pub fn cublas_sgemm(handle: *mut StructCublasContext, transa: CublasOperation, t
     }
     #[cfg(feature = "disable_checks")] {
         unsafe { cublasSgemm_v2(handle, transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc) };
-    }
-}
-
-#[inline]
-pub fn cublas_set_stream(handle: *mut StructCublasContext, stream: *mut Struct_cudaStream_t) {
-    #[cfg(not(feature = "disable_checks"))] {
-        unsafe { cublasSetStream_v2(handle, stream) }.assert_success()
-    }
-    #[cfg(feature = "disable_checks")] {
-        unsafe { cublasSetStream_v2(handle, stream) };
     }
 }
