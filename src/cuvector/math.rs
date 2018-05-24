@@ -2,6 +2,7 @@
 use super::*;
 
 
+/// Vector math operations
 pub struct CuVectorMath<T: CuDataType> {
     _phantom: PhantomData<T>
 }

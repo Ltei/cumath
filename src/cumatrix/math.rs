@@ -9,7 +9,7 @@ use kernel::*;
 use meta::assert::*;
 
 
-
+/// Matrix math operations
 pub struct CuMatrixMath<T: CuDataType> {
     _phantom: PhantomData<T>
 }

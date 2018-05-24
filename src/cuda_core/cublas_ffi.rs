@@ -109,7 +109,7 @@ extern {
         y: *const f32,
         incy: i32,
         result: *mut f32,
-    ) -> CublasStatus; //TODO Caller
+    ) -> CublasStatus;
 
     fn cublasSscal_v2(
         handle: *mut StructCublasContext,
@@ -126,7 +126,7 @@ extern {
         incx: i32,
         y: *const f32,
         incy: i32
-    ) -> CublasStatus; //TODO Caller
+    ) -> CublasStatus;
 
 
     // Level 2

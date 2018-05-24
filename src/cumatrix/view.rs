@@ -4,6 +4,7 @@ use super::*;
 use std::ptr;
 
 
+/// A view over data that act like a slice template
 pub struct CuMatrixView<T: CuDataType> {
     pub(crate) offset: usize,
     pub(crate) deref: CuMatrixDeref<T>,
@@ -11,6 +12,7 @@ pub struct CuMatrixView<T: CuDataType> {
 
 impl<T: CuDataType> CuMatrixView<T> {
 
+    /// Create a new CuMatrixView object with the specified parameters
     pub fn new(offset: usize, rows: usize, cols: usize, leading_dimension: usize) -> CuMatrixView<T> {
         CuMatrixView {
             offset,
@@ -27,6 +29,7 @@ impl<T: CuDataType> CuMatrixView<T> {
     #[inline]
     pub fn len(&self) -> usize { self.deref.len }
 
+    /// Borrow a [vector]'s datas to return a CuMatrix
     pub fn borrow(&mut self, vector: &::CuVectorDeref<T>) -> &CuMatrixDeref<T> {
         #[cfg(not(feature = "disable_checks"))] {
             assert_infeq_usize(self.offset + self.deref.leading_dimension * self.deref.cols,
@@ -36,6 +39,7 @@ impl<T: CuDataType> CuMatrixView<T> {
         &self.deref
     }
 
+    /// Borrow a [vector]'s datas to return a mutable CuMatrix
     pub fn borrow_mut(&mut self, vector: &mut ::CuVectorDeref<T>) -> &mut CuMatrixDeref<T> {
         #[cfg(not(feature = "disable_checks"))] {
             assert_infeq_usize(self.offset + self.deref.leading_dimension * self.deref.cols,
