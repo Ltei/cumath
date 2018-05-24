@@ -35,7 +35,7 @@ Cumath is a safe cuda wrapper for Rust : The goal is to make a zero-cost wrapper
 Add Cumath to your Cargo.toml:
 
     [dependencies]
-    cumath = "0.2.6"
+    cumath = "0.2.7"
 
 Then in your main.rs :
 
