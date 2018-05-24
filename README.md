@@ -48,7 +48,7 @@ Then in your main.rs :
 
 ```rust
 extern crate cumath;
-use cumath::*;
+use self::cumath::*;
 
 fn assert_equals_float(a: f32, b: f32) {
     let d = a-b;
@@ -90,7 +90,7 @@ fn main() {
 
 ```rust
 extern crate cumath;
-use cumath::*;
+use self::cumath::*;
 
 fn assert_equals_float(a: f32, b: f32) {
     let d = a-b;
