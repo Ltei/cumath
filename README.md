@@ -145,9 +145,9 @@ fn main() {
     let mut iter = data.slice_mut_iter();
 
     // Take slices
-    iter.skip(2);                             // Skip the first 3 elements
+    iter.skip(2);                             // Skip the first 2 elements
     let slice1 = iter.next(10).unwrap();      // Take the next 10 elements
-    let slice2 = iter.next(100).unwrap();
+    let slice2 = iter.next(100).unwrap();     // Take the next 100 elements
     let mut slice3 = iter.last(10).unwrap();  // Take the last 10 elements
 
     // Convert slice2 into a matrix by taking a matrix slice
