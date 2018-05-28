@@ -33,13 +33,13 @@ impl<T: CuDataType> Debug for CuVectorDeref<T> {
         let mut buffer = vec![T::zero(); len];
         cuda_memcpy(buffer.as_mut_ptr() as *mut c_void, self.as_ptr() as *const c_void, self.len()*size_of::<T>(), cudaMemcpyKind::DeviceToHost);
         if len > 0 {
-            write!(f, "Vector ({}) [{:p}] : [", len, self.ptr)?;
+            write!(f, "Vector ({}) : [", len)?;
             for i in 0..len-1 {
                 write!(f, "{}, ", buffer[i])?;
             }
             write!(f, "{}]", buffer[len-1])
         } else {
-            write!(f, "Vector ({}) [{:p}] : []", len, self.ptr)
+            write!(f, "Vector ({}) : []", len,)
         }
     }
 }
@@ -97,6 +97,13 @@ impl<T: CuDataType> CuVectorDeref<T> {
                 leading_dimension: rows,
             }
         }
+    }
+
+    /// Clone this vector, returning a new GPU-allocated vector
+    pub fn clone(&self) -> CuVector<T> {
+        let mut result = unsafe { CuVector::<T>::uninitialized(self.len()) };
+        result.clone_from_device(self);
+        result
     }
 
     /// Clone this vector's data to host memory.

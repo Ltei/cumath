@@ -26,6 +26,18 @@ impl<T: CuDataType> DerefMut for CuVector<T> {
 
 impl<T: CuDataType> CuVector<T> {
 
+    /// Returns a new uninitialized GPU-allocated CuVector.
+    pub unsafe fn uninitialized(len: usize) -> CuVector<T> {
+        let mut ptr = ptr::null_mut();
+        cuda_malloc(&mut ptr, len * size_of::<T>());
+        CuVector {
+            deref: CuVectorDeref {
+                ptr: ptr as *mut T,
+                len: len,
+            }
+        }
+    }
+
     /// Creates a new CuVector containing data
     pub fn from_host_data(data: &[T]) -> CuVector<T> {
         let mut ptr = ptr::null_mut();

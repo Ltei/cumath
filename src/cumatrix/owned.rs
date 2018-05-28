@@ -51,6 +51,14 @@ impl_CuMatrix!(f32, VectorPacked_init_f32);
 
 impl<T: CuDataType> CuMatrix<T> {
 
+    /// Returns a new uninitialized GPU-allocated matrix.
+    pub unsafe fn uninitialized(rows: usize, cols: usize) -> CuMatrix<T> {
+        let len = rows * cols;
+        let mut ptr = ptr::null_mut();
+        cuda_malloc(&mut ptr, len * size_of::<T>());
+        CuMatrix { deref: CuMatrixDeref { rows, cols, len, ptr: ptr as *mut T, leading_dimension: rows } }
+    }
+
     /// Returns a new GPU-allocated matrix from CPU data.
     pub fn from_host_data(rows: usize, cols: usize, data: &[T]) -> CuMatrix<T> {
         let len = rows*cols;

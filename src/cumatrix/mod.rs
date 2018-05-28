@@ -36,7 +36,7 @@ impl<T: CuDataType> Debug for CuMatrixDeref<T> {
         let len = self.rows() * self.cols();
         let mut buffer = vec![T::zero(); len];
         self.clone_to_host(&mut buffer);
-        write!(f, "Matrix ({},{}) [{:p}] :\n", self.rows, self.cols, self.ptr)?;
+        write!(f, "Matrix ({},{}) :\n", self.rows, self.cols)?;
         if self.cols > 0 {
             for row in 0..self.rows() {
                 write!(f, "[")?;
@@ -103,6 +103,13 @@ impl<T: CuDataType> CuMatrixDeref<T> {
                 leading_dimension: self.leading_dimension,
             }
         }
+    }
+
+    /// Clone this matrix, returning a new GPU-allocated matrix
+    pub fn clone(&self) -> CuMatrix<T> {
+        let mut result = unsafe { CuMatrix::<T>::uninitialized(self.rows(), self.cols()) };
+        result.clone_from_device(self);
+        result
     }
 
     /// Clone this matrix's data to host memory.

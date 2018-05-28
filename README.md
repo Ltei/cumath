@@ -52,9 +52,7 @@ use self::cumath::*;
 
 fn assert_equals_float(a: f32, b: f32) {
     let d = a-b;
-    if d < -0.000001 || d > 0.000001 {
-        panic!("{} != {}", a, b);
-    }
+    assert!(d > -0.000001 && d < 0.000001);
 }
 
 fn main() {
@@ -94,9 +92,7 @@ use self::cumath::*;
 
 fn assert_equals_float(a: f32, b: f32) {
     let d = a-b;
-    if d < -0.000001 || d > 0.000001 {
-        panic!("{} != {}", a, b);
-    }
+    assert!(d > -0.000001 && d < 0.000001);
 }
 
 fn main() {
@@ -111,7 +107,7 @@ fn main() {
     // Create a Zero 2*2 Matrix
     let mut output = CuMatrix::<f32>::zero(2, 2);
 
-    // Matrix-Matrix multiplication
+    // Matrix-Matrix multiplication (using cublas gemm)
     cublas.mult_m_m(&matrix1, &matrix2, &mut output);
 
     // Copy the data to host memory
@@ -153,7 +149,7 @@ fn main() {
     // Convert slice2 into a matrix by taking a matrix slice
     let matrix = slice2.matrix_slice(0 /*slice offset*/, 10 /*rows*/, 10 /*cols*/);
 
-    // Matrix-matrix multiplication with slice1 as a row-matrix
+    // Matrix-matrix multiplication with slice1 as a row-matrix (using cublas gemv)
     cublas.mult_row_m(&slice1, &matrix, &mut slice3);
 }
 ```
