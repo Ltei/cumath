@@ -38,6 +38,11 @@ impl<T: CuDataType> CuVector<T> {
         }
     }
 
+    /// Creates a Matrix from a raw pointer.
+    pub unsafe fn from_raw_ptr(ptr: *mut T, len: usize) -> CuVector<T> {
+        CuVector { deref: CuVectorDeref { len, ptr } }
+    }
+
     /// Creates a new CuVector containing data
     pub fn from_host_data(data: &[T]) -> CuVector<T> {
         let mut ptr = ptr::null_mut();
@@ -60,16 +65,6 @@ impl<T: CuDataType> CuVector<T> {
             deref: CuVectorDeref {
                 ptr: ptr as *mut T,
                 len: data.len(),
-            }
-        }
-    }
-
-    /// Creates a new CuVector from a pointer and a length
-    pub unsafe fn from_raw_ptr(ptr: *mut T, len: usize) -> CuVector<T>  {
-        CuVector {
-            deref: CuVectorDeref {
-                ptr,
-                len,
             }
         }
     }

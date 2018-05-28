@@ -59,6 +59,11 @@ impl<T: CuDataType> CuMatrix<T> {
         CuMatrix { deref: CuMatrixDeref { rows, cols, len, ptr: ptr as *mut T, leading_dimension: rows } }
     }
 
+    /// Creates a Matrix from a raw pointer.
+    pub unsafe fn from_raw_ptr(ptr: *mut T, rows: usize, cols: usize) -> CuMatrix<T> {
+        CuMatrix { deref: CuMatrixDeref { rows, cols, len: rows*cols, ptr, leading_dimension: rows } }
+    }
+
     /// Returns a new GPU-allocated matrix from CPU data.
     pub fn from_host_data(rows: usize, cols: usize, data: &[T]) -> CuMatrix<T> {
         let len = rows*cols;
