@@ -9,9 +9,7 @@ mod example_cublas_matrix_mult {
 
     fn assert_equals_float(a: f32, b: f32) {
         let d = a-b;
-        if d < -0.000001 || d > 0.000001 {
-            panic!("{} != {}", a, b);
-        }
+        assert!(d > -0.000001 && d < 0.000001);
     }
 
     #[test]
@@ -27,7 +25,7 @@ mod example_cublas_matrix_mult {
         // Create a Zero 2*2 Matrix
         let mut output = CuMatrix::<f32>::zero(2, 2);
 
-        // Matrix-Matrix multiplication
+        // Matrix-Matrix multiplication (using cublas gemm)
         cublas.mult_m_m(&matrix1, &matrix2, &mut output);
 
         // Copy the data to host memory

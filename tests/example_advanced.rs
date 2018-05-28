@@ -30,7 +30,7 @@ mod example_advanced {
         // Convert slice2 into a matrix by taking a matrix slice
         let matrix = slice2.matrix_slice(0 /*slice offset*/, 10 /*rows*/, 10 /*cols*/);
 
-        // Matrix-matrix multiplication with slice1 as a row-matrix
+        // Matrix-matrix multiplication with slice1 as a row-matrix (using cublas gemv)
         cublas.mult_row_m(&slice1, &matrix, &mut slice3);
     }
 
