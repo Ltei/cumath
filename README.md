@@ -18,13 +18,14 @@ Cumath is a safe cuda wrapper for Rust : The goal is to make a zero-cost wrapper
 - CuBLAS
 - CuRAND
 - Cuda streams
-- Data type genericity
+- Data types f32, i32
 
 ## To be implemented :
 
 - [cumath_nn : a Cudnn wrapper based on cumath](https://github.com/Ltei/cumath_nn)
 - User-definable Cuda kernels
 - More built-in functions
+- Data type f64
 
 ## Won't be implemented
 
