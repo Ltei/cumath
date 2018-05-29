@@ -23,6 +23,11 @@ mod math;
 pub use self::math::*;
 
 
+
+const ERROR_MATRIX_VECTOR_CONVERT: &'static str = "Only matrices that are continuous in memory can be converted to a vector.";
+
+
+
 pub struct CuMatrixDeref<T: CuDataType> {
     pub(crate) ptr: *mut T,
     pub(crate) len: usize,
@@ -87,6 +92,38 @@ impl<T: CuDataType> CuMatrixDeref<T> {
     #[inline]
     pub fn as_mut_ptr(&mut self) -> *mut T { self.ptr }
 
+
+    /// Returns a vector slice containing this matrix datas if this matrix is packed, else returns Err
+    pub fn try_as_vector<'a>(&'a self) -> Result<::CuVectorSlice<'a, T>, &'static str> {
+        if self.rows() != self.leading_dimension() {
+            Err(ERROR_MATRIX_VECTOR_CONVERT)
+        } else {
+            Ok(::CuVectorSlice {
+                _parent: PhantomData,
+                deref: ::CuVectorDeref {
+                    ptr: self.ptr,
+                    len: self.len(),
+                }
+            })
+        }
+    }
+
+    /// Returns a mutable vector slice containing this matrix datas if this matrix is packed, else returns Err
+    pub fn try_as_mut_vector<'a>(&'a mut self) -> Result<::CuVectorSliceMut<'a, T>, &'static str> {
+        if self.rows() != self.leading_dimension() {
+            Err(ERROR_MATRIX_VECTOR_CONVERT)
+        } else {
+            Ok(::CuVectorSliceMut {
+                _parent: PhantomData,
+                deref: ::CuVectorDeref {
+                    ptr: self.ptr,
+                    len: self.len(),
+                }
+            })
+        }
+    }
+
+
     /// Returns an immutable sub-matrix.
     pub fn slice<'a>(&'a self, row_offset: usize, col_offset: usize, nb_rows: usize, nb_cols: usize) -> CuMatrixFragment<'a, T> {
         #[cfg(not(feature = "disable_checks"))] {
@@ -102,37 +139,6 @@ impl<T: CuDataType> CuMatrixDeref<T> {
                 cols: nb_cols,
                 leading_dimension: self.leading_dimension,
             }
-        }
-    }
-
-    /// Clone this matrix, returning a new GPU-allocated matrix
-    pub fn clone(&self) -> CuMatrix<T> {
-        let mut result = unsafe { CuMatrix::<T>::uninitialized(self.rows(), self.cols()) };
-        result.clone_from_device(self);
-        result
-    }
-
-    /// Clone this matrix's data to host memory.
-    pub fn clone_to_host(&self, data: &mut [T]) {
-        #[cfg(not(feature = "disable_checks"))] {
-            assert_eq_usize(self.len(), "self.len()", data.len(), "data.len()");
-        }
-        cuda_memcpy2d(data.as_mut_ptr() as *mut c_void,
-                      self.rows() * size_of::<T>(),
-                      self.as_ptr() as *const c_void,
-                      self.leading_dimension() * size_of::<T>(),
-                      self.rows() * size_of::<T>(),
-                      self.cols(),
-                      cudaMemcpyKind::DeviceToHost);
-    }
-
-    #[allow(dead_code)]
-    pub fn dev_assert_equals(&self, data: &[T]) where Self: Sized {
-        if self.len() != data.len() { panic!(); }
-        let mut buffer = vec![T::zero(); self.len()];
-        self.clone_to_host(buffer.as_mut_slice());
-        for i in 0..data.len() {
-            if data[i] != buffer[i] { panic!("At index {} : {:.8} != {:.8}", i, data[i], buffer[i]); }
         }
     }
 
@@ -153,6 +159,7 @@ impl<T: CuDataType> CuMatrixDeref<T> {
             }
         }
     }
+
 
     /// Returns an immutable pointer over a matrix :
     /// - It won't free the inner GPU-pointer when it goes out of scope
@@ -186,6 +193,28 @@ impl<T: CuDataType> CuMatrixDeref<T> {
         }
     }
 
+
+    /// Clone this matrix, returning a new GPU-allocated matrix
+    pub fn clone(&self) -> CuMatrix<T> {
+        let mut result = unsafe { CuMatrix::<T>::uninitialized(self.rows(), self.cols()) };
+        result.clone_from_device(self);
+        result
+    }
+
+    /// Clone this matrix's data to host memory.
+    pub fn clone_to_host(&self, data: &mut [T]) {
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(self.len(), "self.len()", data.len(), "data.len()");
+        }
+        cuda_memcpy2d(data.as_mut_ptr() as *mut c_void,
+                      self.rows() * size_of::<T>(),
+                      self.as_ptr() as *const c_void,
+                      self.leading_dimension() * size_of::<T>(),
+                      self.rows() * size_of::<T>(),
+                      self.cols(),
+                      cudaMemcpyKind::DeviceToHost);
+    }
+
     /// Clone host memory to this matrix's data.
     pub fn clone_from_host(&mut self, data: &[T]) {
         #[cfg(not(feature = "disable_checks"))] {
@@ -212,6 +241,15 @@ impl<T: CuDataType> CuMatrixDeref<T> {
                       self.rows() * size_of::<T>(),
                       self.cols(),
                       cudaMemcpyKind::DeviceToDevice);
+    }
+
+    pub fn dev_assert_equals(&self, data: &[T]) where Self: Sized {
+        if self.len() != data.len() { panic!(); }
+        let mut buffer = vec![T::zero(); self.len()];
+        self.clone_to_host(buffer.as_mut_slice());
+        for i in 0..data.len() {
+            if data[i] != buffer[i] { panic!("At index {} : {:.8} != {:.8}", i, data[i], buffer[i]); }
+        }
     }
 
 }

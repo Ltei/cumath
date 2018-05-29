@@ -75,45 +75,6 @@ impl<T: CuDataType> CuVectorDeref<T> {
         }
     }
 
-    /// Returns an iterator over a vector, returning vector slices.
-    pub fn slice_iter<'a>(&'a self) -> CuVectorSliceIter<'a, T> {
-        CuVectorSliceIter {
-            _parent: PhantomData,
-            len: self.len,
-            ptr: self.ptr,
-        }
-    }
-
-    /// Creates a matrix slice starting from self.ptr()+offset, to self.ptr()+offset+rows*cols.
-    pub fn matrix_slice<'a>(&'a self, offset: usize, rows: usize, cols: usize) -> ::CuMatrixSlice<'a, T> {
-        if offset + rows * cols > self.len() { panic!() }
-        ::CuMatrixSlice {
-            _parent: PhantomData,
-            deref: ::CuMatrixDeref {
-                ptr: unsafe { self.ptr.offset(offset as isize) },
-                len: rows*cols,
-                rows,
-                cols,
-                leading_dimension: rows,
-            }
-        }
-    }
-
-    /// Clone this vector, returning a new GPU-allocated vector
-    pub fn clone(&self) -> CuVector<T> {
-        let mut result = unsafe { CuVector::<T>::uninitialized(self.len()) };
-        result.clone_from_device(self);
-        result
-    }
-
-    /// Clone this vector's data to host memory.
-    pub fn clone_to_host(&self, data: &mut [T]) {
-        #[cfg(not(feature = "disable_checks"))] {
-            assert_eq_usize(self.len(), "self.len()", data.len(), "data.len()");
-        }
-        cuda_memcpy(data.as_mut_ptr() as *mut c_void, self.as_ptr() as *const c_void, data.len()*size_of::<T>(), cudaMemcpyKind::DeviceToHost);
-    }
-    
     /// Returns a mutable vector slice pointing to this vector's data :
     /// self[offset..offset+len]
     pub fn slice_mut<'a>(&'a mut self, offset: usize, len: usize) -> CuVectorSliceMut<'a, T> {
@@ -176,12 +137,18 @@ impl<T: CuDataType> CuVectorDeref<T> {
         slices
     }
 
-    /// Returns an iterator over a mutable vector, returning mutable vector slices.
-    pub fn slice_mut_iter<'a>(&'a mut self) -> CuVectorSliceIterMut<'a, T> {
-        CuVectorSliceIterMut {
+    /// Creates a matrix slice starting from self.ptr()+offset, to self.ptr()+offset+rows*cols.
+    pub fn matrix_slice<'a>(&'a self, offset: usize, rows: usize, cols: usize) -> ::CuMatrixSlice<'a, T> {
+        if offset + rows * cols > self.len() { panic!() }
+        ::CuMatrixSlice {
             _parent: PhantomData,
-            len: self.len(),
-            ptr: self.as_mut_ptr(),
+            deref: ::CuMatrixDeref {
+                ptr: unsafe { self.ptr.offset(offset as isize) },
+                len: rows*cols,
+                rows,
+                cols,
+                leading_dimension: rows,
+            }
         }
     }
 
@@ -197,6 +164,24 @@ impl<T: CuDataType> CuVectorDeref<T> {
                 cols,
                 leading_dimension: rows,
             }
+        }
+    }
+
+    /// Returns an iterator over a vector, returning vector slices.
+    pub fn slice_iter<'a>(&'a self) -> CuVectorSliceIter<'a, T> {
+        CuVectorSliceIter {
+            _parent: PhantomData,
+            len: self.len,
+            ptr: self.ptr,
+        }
+    }
+
+    /// Returns an iterator over a mutable vector, returning mutable vector slices.
+    pub fn slice_mut_iter<'a>(&'a mut self) -> CuVectorSliceIterMut<'a, T> {
+        CuVectorSliceIterMut {
+            _parent: PhantomData,
+            len: self.len(),
+            ptr: self.as_mut_ptr(),
         }
     }
 
@@ -224,6 +209,21 @@ impl<T: CuDataType> CuVectorDeref<T> {
                 len: self.len,
             }
         }
+    }
+
+    /// Clone this vector, returning a new GPU-allocated vector
+    pub fn clone(&self) -> CuVector<T> {
+        let mut result = unsafe { CuVector::<T>::uninitialized(self.len()) };
+        result.clone_from_device(self);
+        result
+    }
+
+    /// Clone this vector's data to host memory.
+    pub fn clone_to_host(&self, data: &mut [T]) {
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(self.len(), "self.len()", data.len(), "data.len()");
+        }
+        cuda_memcpy(data.as_mut_ptr() as *mut c_void, self.as_ptr() as *const c_void, data.len()*size_of::<T>(), cudaMemcpyKind::DeviceToHost);
     }
 
     /// Copy host memory into this vector.

@@ -4,7 +4,10 @@ use super::*;
 use std::ptr;
 
 
-/// A view over data that act like a slice template
+/// A view over data that act like a slice template :
+/// CuMatrixView::<T>::new(0, rows, cols, ld).borrow(&vector)
+/// is equivalent to
+/// vector.matrix_slice(0, rows, cols)
 pub struct CuMatrixView<T: CuDataType> {
     pub(crate) offset: usize,
     pub(crate) deref: CuMatrixDeref<T>,

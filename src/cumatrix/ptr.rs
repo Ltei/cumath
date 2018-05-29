@@ -3,7 +3,7 @@ use super::*;
 use CuDataType;
 
 
-/// A pointer over a continuous matrix : It won't free the inner GPU-pointer when it goes out of scope
+/// A pointer over a matrix : It won't free the inner GPU-pointer when it goes out of scope
 #[derive(Debug)]
 pub struct CuMatrixPtr<T: CuDataType> {
     pub(crate) deref: CuMatrixDeref<T>,
@@ -41,7 +41,7 @@ impl<T: CuDataType> CuMatrixPtr<T> {
 }
 
 
-/// A pointer over a continuous matrix : It won't free the inner GPU-pointer when it goes out of scope
+/// A pointer over a mutable matrix : It won't free the inner GPU-pointer when it goes out of scope
 #[derive(Debug)]
 pub struct CuMatrixMutPtr<T: CuDataType> {
     pub(crate) deref: CuMatrixDeref<T>,
