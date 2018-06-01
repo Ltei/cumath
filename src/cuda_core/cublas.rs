@@ -153,20 +153,6 @@ impl Cublas {
 
     // Level 3
 
-    /// output = matrix_mult( transa(a), transb(b) )
-    /// Isn't public because checking dimensions would be too costy, so use mult_m_m, mult_mt_m.. instead
-    fn gemm(&self, alpha: f32, beta: f32, a: &CuMatrixDeref<f32>, transa: CublasOperation, b: &CuMatrixDeref<f32>, transb: CublasOperation, output: &mut CuMatrixDeref<f32>) {
-        cublas_sgemm(self.handle,
-                     transa, transb,
-                     a.rows() as i32, b.cols() as i32, a.cols() as i32, &alpha,
-                     a.as_ptr(), a.rows() as i32,
-                     b.as_ptr(), b.rows() as i32,
-                     &beta, output.as_mut_ptr(), output.rows() as i32)
-    }
-    //pub fn mult_mt_m(&self, a: &CuVectorDeref<f32>, b: &CuVectorDeref<f32>, output: &mut CuMatrixDeref<f32>) TODO
-    //pub fn mult_m_mt(&self, a: &CuVectorDeref<f32>, b: &CuVectorDeref<f32>, output: &mut CuMatrixDeref<f32>) TODO
-    //pub fn mult_mt_mt(&self, a: &CuVectorDeref<f32>, b: &CuVectorDeref<f32>, output: &mut CuMatrixDeref<f32>) TODO
-
     /// output = matrix_mult(left_op, right_op)
     pub fn mult_m_m(&self, left_op: &CuMatrixDeref<f32>, right_op: &CuMatrixDeref<f32>, output: &mut CuMatrixDeref<f32>) {
         #[cfg(not(feature = "disable_checks"))] {
@@ -174,13 +160,42 @@ impl Cublas {
             assert_eq_usize(left_op.rows(), "left_op.rows()", output.rows(), "output.rows()");
             assert_eq_usize(right_op.cols(), "right_op.cols()", output.cols(), "output.cols()");
         }
-        self.gemm(1.0, 0.0, left_op, CublasOperation::None, right_op, CublasOperation::None, output)
-        /*cublas_sgemm(self.handle,
+        cublas_sgemm(self.handle,
                      CublasOperation::None, CublasOperation::None,
                      left_op.rows() as i32, right_op.cols() as i32, left_op.cols() as i32, &1.0,
-                     left_op.as_ptr(), left_op.rows() as i32,
-                     right_op.as_ptr(), right_op.rows() as i32,
-                     &0.0, output.as_mut_ptr(), output.rows() as i32)*/
+                     left_op.as_ptr(), left_op.leading_dimension() as i32,
+                     right_op.as_ptr(), right_op.leading_dimension() as i32,
+                     &0.0, output.as_mut_ptr(), output.rows() as i32)
+    }
+
+    /// output = matrix_mult(left_op, transpose(right_op))
+    pub fn mult_m_mt(&self, left_op: &CuMatrixDeref<f32>, right_op: &CuMatrixDeref<f32>, output: &mut CuMatrixDeref<f32>) {
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(left_op.cols(), "left_op.cols()", right_op.cols(), "right_op.cols()");
+            assert_eq_usize(left_op.rows(), "left_op.rows()", output.rows(), "output.rows()");
+            assert_eq_usize(right_op.rows(), "right_op.rows()", output.cols(), "output.cols()");
+        }
+        cublas_sgemm(self.handle,
+                     CublasOperation::None, CublasOperation::Transpose,
+                     left_op.rows() as i32, right_op.rows() as i32, left_op.cols() as i32, &1.0,
+                     left_op.as_ptr(), left_op.leading_dimension() as i32,
+                     right_op.as_ptr(), right_op.leading_dimension() as i32,
+                     &0.0, output.as_mut_ptr(), output.rows() as i32)
+    }
+
+    /// output = matrix_mult(transpose(left_op), right_op)
+    pub fn mult_mt_m(&self, left_op: &CuMatrixDeref<f32>, right_op: &CuMatrixDeref<f32>, output: &mut CuMatrixDeref<f32>) {
+        #[cfg(not(feature = "disable_checks"))] {
+            assert_eq_usize(left_op.rows(), "left_op.rows()", right_op.rows(), "right_op.rows()");
+            assert_eq_usize(left_op.cols(), "left_op.cols()", output.rows(), "output.rows()");
+            assert_eq_usize(right_op.cols(), "right_op.cols()", output.cols(), "output.cols()");
+        }
+        cublas_sgemm(self.handle,
+                     CublasOperation::Transpose, CublasOperation::None,
+                     left_op.cols() as i32, right_op.cols() as i32, left_op.rows() as i32, &1.0,
+                     left_op.as_ptr(), left_op.leading_dimension() as i32,
+                     right_op.as_ptr(), right_op.leading_dimension() as i32,
+                     &0.0, output.as_mut_ptr(), output.rows() as i32)
     }
 
 }

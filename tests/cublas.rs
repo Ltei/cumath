@@ -187,6 +187,51 @@ mod cublas {
         assert_equals_float(output_buffer[3], 12.25);
     }
 
+    #[test]
+    fn mult_m_mt() {
+        let input_data = vec![-1.0, 2.0, 1.0, -2.0, 7.0, 5.5];
+
+        let cublas = Cublas::new().unwrap();
+        let matrix1 = CuMatrix::<f32>::from_host_data(2, 3, input_data.as_slice());
+        let matrix2 = CuMatrix::<f32>::from_host_data(2, 3, input_data.as_slice());
+        let mut output = CuMatrix::<f32>::zero(2, 2);
+
+        cublas.mult_m_mt(&matrix1, &matrix2, &mut output);
+
+        let mut output_buffer = vec![0.0; 4];
+        output.clone_to_host(output_buffer.as_mut_slice());
+
+        assert_equals_float(output_buffer[0], 51.0);
+        assert_equals_float(output_buffer[1], 34.5);
+        assert_equals_float(output_buffer[2], 34.5);
+        assert_equals_float(output_buffer[3], 38.25);
+    }
+
+    #[test]
+    fn mult_mt_m() {
+        let input_data = vec![-1.0, 2.0, 1.0, -2.0, 7.0, 5.5];
+
+        let cublas = Cublas::new().unwrap();
+        let matrix1 = CuMatrix::<f32>::from_host_data(2, 3, input_data.as_slice());
+        let matrix2 = CuMatrix::<f32>::from_host_data(2, 3, input_data.as_slice());
+        let mut output = CuMatrix::<f32>::zero(3, 3);
+
+        cublas.mult_mt_m(&matrix1, &matrix2, &mut output);
+
+        let mut output_buffer = vec![0.0; 9];
+        output.clone_to_host(output_buffer.as_mut_slice());
+
+        assert_equals_float(output_buffer[0], 5.0);
+        assert_equals_float(output_buffer[1], -5.0);
+        assert_equals_float(output_buffer[2], 4.0);
+        assert_equals_float(output_buffer[3], -5.0);
+        assert_equals_float(output_buffer[4], 5.0);
+        assert_equals_float(output_buffer[5], -4.0);
+        assert_equals_float(output_buffer[6], 4.0);
+        assert_equals_float(output_buffer[7], -4.0);
+        assert_equals_float(output_buffer[8], 79.25);
+    }
+
     /*
     #[test]
     fn benchmark_stream() {
