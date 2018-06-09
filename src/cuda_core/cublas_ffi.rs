@@ -156,6 +156,17 @@ extern {
         C: *mut f32, ldc: i32
     ) -> CublasStatus;
 
+    fn cublasSgemmBatched_v2(
+        handle: *mut StructCublasContext,
+        transa: CublasOperation, transb: CublasOperation,
+        m: i32, n: i32, k: i32,
+        alpha: *const f32,
+        Aarray: *const*const f32, lda: i32,
+        Barray: *const*const f32, ldb: i32,
+        beta: *const f32,
+        Carray: *mut*mut f32, ldc: i32
+    ) -> CublasStatus;
+
 
 }
 
@@ -289,5 +300,15 @@ pub fn cublas_sgemm(handle: *mut StructCublasContext, transa: CublasOperation, t
     }
     #[cfg(feature = "disable_checks")] {
         unsafe { cublasSgemm_v2(handle, transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc) };
+    }
+}
+
+#[inline]
+pub fn cublas_sgemm_batched(handle: *mut StructCublasContext, transa: CublasOperation, transb: CublasOperation, m: i32, n: i32, k: i32, alpha: *const f32, a_array: *const*const f32, lda: i32, b_array: *const*const f32, ldb: i32, beta: *const f32, c_array: *mut*mut f32, ldc: i32) {
+    #[cfg(not(feature = "disable_checks"))] {
+        unsafe { cublasSgemmBatched_v2(handle, transa, transb, m, n, k, alpha, a_array, lda, b_array, ldb, beta, c_array, ldc) }.assert_success()
+    }
+    #[cfg(feature = "disable_checks")] {
+        unsafe { cublasSgemmBatched_v2(handle, transa, transb, m, n, k, alpha, a_array, lda, b_array, ldb, beta, c_array, ldc) };
     }
 }
