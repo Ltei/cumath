@@ -6,9 +6,6 @@ Cumath is a safe cuda wrapper for Rust : The goal is to make a zero-cost wrapper
 
 /!\ This library is still under developement!
 
-/!\ Cumath look for cuda libraries in /usr/bin/loca/cuda/lib64 (the default cuda path on linux)
-    If it doesn't work for you, you can [explicitly specify cuda path](https://stackoverflow.com/questions/26246849/how-to-i-tell-rust-where-to-look-for-a-static-library)
-
 
 ## Implemented :
 
