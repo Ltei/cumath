@@ -1,3 +1,5 @@
+[See this project on crates.io](https://crates.io/crates/cumath)
+
 # cumath
 
 Cumath is a safe cuda wrapper for Rust : The goal is to make a zero-cost wrapper that allows you tu use cuda, cublas, and curand easily.
